@@ -8,29 +8,29 @@ export function SiteHeader() {
           to="/"
           className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-pine"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pine text-white">
-            DR
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pine text-white shadow-sm">
+            <LogoMark />
           </span>
           Direct Rental
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-ink/70 md:flex">
-          <a href="/#how-it-works" className="transition hover:text-ink">
-            How it works
-          </a>
-          <a href="/#pricing" className="transition hover:text-ink">
-            ROI
-          </a>
-          <Link to="/demo" className="transition hover:text-ink">
-            Demo property
-          </Link>
-        </nav>
         <a
           href="/#lead-form"
           className="rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine/90"
         >
-          Book a demo
+          Get started
         </a>
       </div>
     </header>
+  );
+}
+
+function LogoMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 19V9.5L12 4l8 5.5V19" />
+      <path d="M9 19v-5h6v5" />
+      <path d="M8 11h.01" />
+      <path d="M16 11h.01" />
+    </svg>
   );
 }

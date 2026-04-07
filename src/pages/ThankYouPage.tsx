@@ -14,9 +14,9 @@ export function ThankYouPage() {
       <section className="container-shell section-spacing">
         <div className="card-surface mx-auto max-w-3xl px-6 py-12 text-center sm:px-10">
           <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Thank you</p>
-          <h1 className="mt-4 text-5xl text-ink">Your demo request is in.</h1>
+          <h1 className="mt-4 text-5xl text-ink">Thanks — we&apos;ll be in touch soon.</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-ink/70">
-            We have logged your details and this prototype is ready to be shown to real hosts or connected to a real lead capture endpoint later.
+            We&apos;ve recorded your early access interest and will follow up shortly.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
