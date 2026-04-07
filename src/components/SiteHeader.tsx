@@ -17,7 +17,7 @@ export function SiteHeader() {
           href="/#lead-form"
           className="rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine/90"
         >
-          Get started
+          Join early access
         </a>
       </div>
     </header>

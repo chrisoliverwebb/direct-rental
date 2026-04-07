@@ -20,15 +20,15 @@ export function HomePage() {
               Stop losing fees to booking platforms. Get more direct bookings.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-ink/70">
-              We build your own booking website, sync your calendar, and help you get direct bookings
-              so you keep more of every stay.
+              We build your booking website, sync your calendar, and help you turn more guests into
+              direct bookings.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#lead-form"
                 className="rounded-full bg-pine px-6 py-4 text-center text-base font-medium text-white transition hover:bg-pine/90"
               >
-                Get started
+                Join early access
               </a>
               <Link
                 to="/demo"
@@ -50,19 +50,16 @@ export function HomePage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
               {
-                title: "We build your booking website",
-                points: ["Your own branded booking website"],
+                title: "We build your website",
+                points: ["Your own branded booking site"],
               },
               {
                 title: "Guests book direct with you",
-                points: [
-                  "Accept direct reservations from guests",
-                  "Sync availability with your existing booking platforms",
-                ],
+                points: ["Accept direct reservations and sync availability"],
               },
               {
-                title: "You keep more of every booking",
-                points: ["No commissions on direct bookings"],
+                title: "You stay in control",
+                points: ["Keep more of each booking and build direct guest relationships"],
               },
             ].map((step, index) => (
               <div key={step.title} className="card-surface p-6">
@@ -86,17 +83,37 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="container-shell section-spacing">
+        <div className="card-surface overflow-hidden">
+          <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[0.8fr_1.2fr]">
+            <div className="max-w-lg">
+              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Demo</p>
+              <h2 className="mt-4 text-4xl text-ink">This is what your property could look like</h2>
+              <p className="mt-4 text-lg leading-8 text-ink/70">
+                A modern, mobile-friendly website designed to help guests book direct with you.
+              </p>
+              <Link
+                to="/demo"
+                className="mt-8 inline-flex rounded-full bg-pine px-6 py-4 text-base font-medium text-white transition hover:bg-pine/90"
+              >
+                View example property
+              </Link>
+            </div>
+            <BrowserPreview />
+          </div>
+        </div>
+      </section>
+
       <section id="pricing" className="container-shell section-spacing">
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="max-w-xl">
             <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Comparison</p>
             <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Keep more of every booking</h2>
             <p className="mt-5 text-lg leading-8 text-ink/70">
-              Every time a guest books through booking platforms, a portion of each booking goes in
-              fees.
+              Booking platforms take a cut of every booking.
             </p>
             <p className="mt-4 text-lg leading-8 text-ink/70">
-              With direct bookings, you keep more of your revenue and stay in control.
+              Direct bookings help you keep more of your revenue.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -122,33 +139,12 @@ export function HomePage() {
                 <p className="text-lg text-white/80">0% platform fees</p>
               </div>
               <div className="mt-8 rounded-[22px] bg-white/10 p-5">
-                <p className="text-3xl font-semibold">£1,000 received</p>
+                <p className="whitespace-nowrap text-3xl font-semibold">£1,000 received</p>
               </div>
               <div className="mt-8 rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
                 Better margins, stronger brand, more repeat guest opportunities.
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="container-shell section-spacing">
-        <div className="card-surface overflow-hidden">
-          <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="max-w-lg">
-              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Demo</p>
-              <h2 className="mt-4 text-4xl text-ink">This is what your property could look like</h2>
-              <p className="mt-4 text-lg leading-8 text-ink/70">
-                A clean, modern booking website designed to convert visitors into direct bookings.
-              </p>
-              <Link
-                to="/demo"
-                className="mt-8 inline-flex rounded-full bg-pine px-6 py-4 text-base font-medium text-white transition hover:bg-pine/90"
-              >
-                View example property
-              </Link>
-            </div>
-            <BrowserPreview />
           </div>
         </div>
       </section>
@@ -164,23 +160,23 @@ export function HomePage() {
           <div className="mt-8 card-surface grid gap-4 p-6 sm:p-8">
             {[
               {
-                title: "Get found online",
-                copy: "Your site is built to appear in search results",
+                title: "Search-friendly from day one",
+                copy: "Built to show up clearly in search",
                 icon: <SearchIcon />,
               },
               {
-                title: "Bring in visitors",
-                copy: "Use simple ads and social channels to drive traffic",
+                title: "Run simple ad campaigns",
+                copy: "Send traffic from Google or social media",
                 icon: <MegaphoneIcon />,
               },
               {
-                title: "We guide you",
-                copy: "Clear, practical steps - no marketing experience needed",
+                title: "Clear guidance",
+                copy: "Practical help without marketing jargon",
                 icon: <GuideIcon />,
               },
               {
-                title: "Convert to direct bookings",
-                copy: "Turn traffic into bookings you control",
+                title: "Turn visits into direct bookings",
+                copy: "Direct guests to your own site, not just platforms",
                 icon: <SparkArrowIcon />,
               },
             ].map((item) => (
@@ -205,11 +201,9 @@ export function HomePage() {
         <div className="card-surface p-6 sm:p-8">
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Early access</p>
-            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
-              Stop relying only on booking platforms
-            </h2>
+            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Get your own direct booking website</h2>
             <p className="mt-4 text-lg leading-8 text-ink/70">
-              Join early access to get your own direct booking website.
+              Join early access to be one of the first to launch your own direct booking site.
             </p>
           </div>
           <div className="mx-auto w-full max-w-3xl">
