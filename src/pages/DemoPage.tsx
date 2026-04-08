@@ -455,7 +455,7 @@ export function DemoPage() {
             <div className="absolute bottom-6 right-6 flex gap-2 sm:bottom-8 sm:right-8">
               {heroImages.map((image, index) => (
                 <button
-                  key={`${image.src}-dot`}
+                  key={`${image.jpg}-dot`}
                   type="button"
                   onClick={() => setHeroImageIndex(index)}
                   className={`h-2.5 rounded-full transition-all ${

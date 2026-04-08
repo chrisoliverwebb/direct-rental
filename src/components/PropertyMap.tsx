@@ -1,5 +1,4 @@
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 const markerIcon = createHomeIcon("#9a5f3c");
