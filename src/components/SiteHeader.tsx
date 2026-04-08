@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 export function SiteHeader() {
   return (
     <header className="container-shell pt-6">
-      <div className="card-surface flex items-center justify-between px-5 py-4">
+      <div className="card-surface flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to="/"
-          className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-pine"
+          className="flex items-center gap-3 text-center text-sm font-semibold uppercase tracking-[0.24em] text-pine sm:text-left"
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pine text-white shadow-sm">
             <LogoMark />
@@ -15,7 +15,7 @@ export function SiteHeader() {
         </Link>
         <a
           href="/#lead-form"
-          className="rounded-full bg-pine px-5 py-3 text-sm font-medium text-white transition hover:bg-pine/90"
+          className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine/90 sm:w-auto"
         >
           Join early access
         </a>

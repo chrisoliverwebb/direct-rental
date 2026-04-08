@@ -4,19 +4,23 @@ import { LeadForm } from "../components/LeadForm";
 import { SiteHeader } from "../components/SiteHeader";
 import { usePageMeta } from "../lib/usePageMeta";
 
+const GBP = "\u00a3";
+const APPROX = "\u2248";
+
 export function HomePage() {
   usePageMeta(
     "Direct Rental | Direct-booking websites for holiday rental hosts",
-    "Launch a premium direct-booking website for your holiday rental and reduce reliance on Airbnb and Booking.com.",
+    "Launch a premium direct-booking website for your holiday rental and reduce reliance on booking platforms.",
   );
 
   return (
     <main>
       <SiteHeader />
+
       <section className="container-shell section-spacing">
         <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="max-w-2xl">
-            <h1 className="max-w-xl text-5xl leading-tight text-ink sm:text-6xl">
+            <h1 className="max-w-xl text-4xl leading-tight text-ink sm:text-6xl">
               Stop losing fees to booking platforms. Get more direct bookings.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-ink/70">
@@ -37,6 +41,9 @@ export function HomePage() {
                 View example property
               </Link>
             </div>
+            <p className="mt-4 text-sm text-ink/55">
+              From {GBP}19/month per property
+            </p>
           </div>
           <BrowserPreview />
         </div>
@@ -110,39 +117,57 @@ export function HomePage() {
             <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Comparison</p>
             <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Keep more of every booking</h2>
             <p className="mt-5 text-lg leading-8 text-ink/70">
-              Booking platforms take a cut of every booking.
+              Booking sites often charge the equivalent of 10% to 25% in effective fees once host
+              fees and guest service fees are factored in.
             </p>
             <p className="mt-4 text-lg leading-8 text-ink/70">
-              Direct bookings help you keep more of your revenue.
+              With Direct Rental, pricing starts from {GBP}19/month per property, plus payment
+              processing when accepting online payments. The amount you save in fees from a single
+              booking could easily cover your monthly costs.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[28px] bg-[#24473d] p-6 text-white shadow-soft">
-              <p className="text-sm uppercase tracking-[0.24em] text-white/60">
-                Booking platforms
-              </p>
+            <div className="flex h-full flex-col rounded-[28px] bg-[#ff5a5f] p-6 text-white shadow-soft">
+              <p className="text-sm uppercase tracking-[0.24em] text-white/60">Booking site</p>
               <div className="mt-4 space-y-2">
-                <h3 className="text-3xl">£1,000 booking</h3>
-                <p className="text-lg text-white/80">-15% fees</p>
+                <h3 className="text-2xl sm:text-3xl">
+                  Guest pays {GBP}1,000
+                </h3>
+                <p className="text-base text-white/80">Minus host fee: 3%</p>
+                <p className="text-base text-white/80">
+                  Minus guest fee impact: {APPROX} 15%
+                </p>
               </div>
               <div className="mt-8 rounded-[22px] bg-white/10 p-5">
-                <p className="whitespace-nowrap text-3xl font-semibold">≈ £850 received</p>
+                <p className="text-2xl font-semibold sm:text-3xl">
+                  You receive {APPROX} {GBP}820
+                </p>
               </div>
-              <div className="mt-8 rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
-                Less profit, less control, limited direct relationship with guests.
+              <div className="mt-auto rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
+                Less profit, less control, and a weaker direct relationship with the guest.
               </div>
             </div>
+
             <div className="rounded-[28px] bg-pine p-6 text-white shadow-soft">
-              <p className="text-sm uppercase tracking-[0.24em] text-white/60">Direct bookings</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-white/60">Direct Rental</p>
               <div className="mt-4 space-y-2">
-                <h3 className="text-3xl">£1,000 booking</h3>
-                <p className="text-lg text-white/80">0% platform fees</p>
+                <h3 className="text-2xl sm:text-3xl">
+                  Guest pays {GBP}1,000
+                </h3>
+                <p className="text-base text-white/80">No platform commission</p>
+                <p className="text-base text-white/80">From {GBP}19/month per property</p>
               </div>
               <div className="mt-8 rounded-[22px] bg-white/10 p-5">
-                <p className="whitespace-nowrap text-3xl font-semibold">£1,000 received</p>
+                <p className="text-2xl font-semibold sm:text-3xl">
+                  You receive {GBP}1,000*
+                </p>
               </div>
+              <p className="mt-4 text-sm italic text-white/75">
+                * Example shown for direct payment. For online payments, a small payment processing
+                fee (typically 1% to 3%) will be deducted.
+              </p>
               <div className="mt-8 rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
-                Better margins, stronger brand, more repeat guest opportunities.
+                Better margins, stronger brand, and a direct relationship with the guest.
               </div>
             </div>
           </div>
@@ -225,7 +250,7 @@ export function HomePage() {
             <div>
               <p className="text-sm font-semibold text-ink">Contact</p>
               <div className="mt-3 grid gap-2 text-sm text-ink/65">
-                <p>hello@directrental.io</p>
+                <p>hello@directrental.uk</p>
                 <p>Early access enquiries open</p>
               </div>
             </div>

@@ -40,6 +40,7 @@ export function DemoPage() {
     "An example guest-facing direct-booking website for a fictional countryside holiday cottage.",
   );
 
+  const [isHostOverlayVisible, setIsHostOverlayVisible] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [bookingStep, setBookingStep] = useState<1 | 2>(1);
@@ -62,6 +63,8 @@ export function DemoPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [shouldRenderMap, setShouldRenderMap] = useState(false);
   const locationSectionRef = useRef<HTMLDivElement | null>(null);
+  const lastScrollYRef = useRef(0);
+  const scrollRafRef = useRef<number | null>(null);
   const featuredImage = galleryImages[selectedImage] ?? galleryImages[0];
   const heroImages = galleryImages.slice(0, 5);
   const activeMonth = calendarMonths[calendarMonthIndex];
@@ -96,6 +99,52 @@ export function DemoPage() {
 
     return () => window.clearInterval(timer);
   }, [heroImages.length]);
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY || 0;
+
+    const onScroll = () => {
+      if (scrollRafRef.current != null) return;
+
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        const y = window.scrollY || 0;
+        const last = lastScrollYRef.current;
+        lastScrollYRef.current = y;
+
+        const viewportBottom = y + window.innerHeight;
+        const docHeight = document.documentElement.scrollHeight;
+        const nearBottom = docHeight - viewportBottom < 160;
+
+        if (nearBottom) {
+          setIsHostOverlayVisible(false);
+          return;
+        }
+
+        if (y < 120) {
+          setIsHostOverlayVisible(true);
+          return;
+        }
+
+        if (y > last + 10) {
+          setIsHostOverlayVisible(false);
+          return;
+        }
+
+        if (y < last - 10) {
+          setIsHostOverlayVisible(true);
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (scrollRafRef.current != null) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const element = locationSectionRef.current;
@@ -288,9 +337,15 @@ export function DemoPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f2ea] text-stone-900">
-      <div className="fixed bottom-4 right-4 z-40 max-w-sm rounded-[22px] border border-white/70 bg-white/92 p-3 shadow-[0_18px_40px_rgba(28,25,23,0.14)] backdrop-blur-sm">
+      <div
+        className={`fixed bottom-4 left-4 right-4 z-[9999] rounded-[22px] border border-white/80 bg-white/95 p-3 shadow-[0_18px_40px_rgba(28,25,23,0.16)] ring-1 ring-black/5 backdrop-blur-md transition-all duration-300 sm:left-auto sm:right-4 sm:max-w-sm ${
+          isHostOverlayVisible
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-4 opacity-0"
+        }`}
+      >
         <p className="text-[11px] uppercase tracking-[0.24em] text-amber-800/80">Host demo</p>
-        <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-stone-600">
             This is an example guest-facing booking website your property could have.
           </p>
@@ -343,7 +398,7 @@ export function DemoPage() {
 
       <section className="pb-8">
         <div className="overflow-hidden shadow-[0_30px_80px_rgba(28,25,23,0.12)]">
-          <div className="relative min-h-[620px] sm:min-h-[720px]">
+          <div className="relative min-h-[540px] sm:min-h-[720px]">
             {heroImages.map((image, index) => (
               <div
                 key={image.jpg}
@@ -367,7 +422,7 @@ export function DemoPage() {
               </p>
               <div className="mt-4 flex flex-col items-center gap-6 text-center">
                 <div>
-                  <h1 className="max-w-3xl text-5xl text-white sm:text-6xl">
+                  <h1 className="max-w-3xl text-4xl text-white sm:text-6xl">
                     Foxglove Hollow Cottage
                   </h1>
                   <p className="mt-4 max-w-2xl text-lg leading-8 text-white/80">
@@ -414,20 +469,20 @@ export function DemoPage() {
         </div>
       </section>
 
-      <section id="gallery" className="container-shell">
-        <div className="grid items-stretch gap-4 md:grid-cols-[1.3fr_0.7fr]">
-          <div className="flex h-full flex-col gap-4">
-            <div className="relative aspect-[16/10] min-h-[420px] overflow-hidden rounded-[30px] shadow-[0_24px_60px_rgba(28,25,23,0.08)]">
+      <section id="gallery" className="container-shell section-spacing pt-0">
+        <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+          <div className="flex flex-col gap-4 xl:h-full">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-[30px] shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:min-h-[420px]">
               <div key={featuredImage.jpg} className="animate-gallery-fade h-full w-full">
                 <ResponsiveImage
                   image={featuredImage}
                   loading="eager"
                   sizes="(max-width: 768px) 100vw, 1200px"
                   className="block h-full w-full"
-                  imgClassName="h-full min-h-[420px] w-full object-cover object-center"
+                  imgClassName="h-full w-full object-cover object-center"
                 />
               </div>
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-stone-950/60 to-transparent p-6 text-white">
+              <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 bg-gradient-to-t from-stone-950/60 to-transparent p-4 text-white sm:flex-row sm:items-end sm:justify-between sm:p-6">
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-white/70">
                     Photo {selectedImage + 1} of {galleryImages.length}
@@ -456,7 +511,7 @@ export function DemoPage() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {galleryImages.map((image, index) => (
                 <button
                   key={`${image.jpg}-${index}`}
@@ -472,22 +527,22 @@ export function DemoPage() {
                     image={image}
                     sizes="180px"
                     className="block h-full w-full"
-                    imgClassName="aspect-[4/3] h-[120px] w-full object-cover object-center"
+                    imgClassName="aspect-[4/3] h-[100px] w-full object-cover object-center sm:h-[120px]"
                   />
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex h-full flex-col rounded-[30px] border border-white/70 bg-white/75 p-6 shadow-[0_24px_60px_rgba(28,25,23,0.08)] backdrop-blur-sm">
+          <div className="flex flex-col rounded-[30px] border border-white/70 bg-white/75 p-5 shadow-[0_24px_60px_rgba(28,25,23,0.08)] backdrop-blur-sm sm:p-6 xl:h-full">
             <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">At a glance</p>
-            <h2 className="mt-4 text-3xl text-stone-900">
+            <h2 className="mt-4 text-2xl text-stone-900 sm:text-3xl">
               A relaxed countryside stay with hotel-level polish.
             </h2>
             <p className="mt-4 text-base leading-7 text-stone-600">
               Foxglove Hollow Cottage blends warm stone, soft linens, and generous communal spaces for
               family weekends, walking breaks, and longer countryside escapes.
             </p>
-            <div className="mt-6 grid flex-1 content-start gap-3">
+            <div className="mt-6 grid flex-1 content-start gap-3 sm:grid-cols-2 xl:grid-cols-1">
               {amenities.map((amenity, index) => (
                 <div
                   key={amenity}
@@ -660,7 +715,7 @@ export function DemoPage() {
                       ))}
                     </div>
                   ) : null}
-                  <div className="mx-auto grid max-w-[420px] grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-[0.14em] text-stone-400">
+                  <div className="mx-auto grid w-full max-w-[360px] grid-cols-7 gap-0.5 text-center text-[10px] uppercase tracking-[0.14em] text-stone-400 sm:max-w-[420px] sm:gap-1">
                     {weekDays.map((day) => (
                       <div key={day} className="py-0.5">
                         {day}
@@ -668,7 +723,7 @@ export function DemoPage() {
                     ))}
                   </div>
                   <div
-                    className="mx-auto mt-2 grid max-w-[420px] grid-cols-7 gap-1"
+                    className="mx-auto mt-2 grid w-full max-w-[360px] grid-cols-7 gap-0.5 sm:max-w-[420px] sm:gap-1"
                     onMouseLeave={() => {
                       if (!checkOut) setHoverDate("");
                     }}
@@ -708,7 +763,7 @@ export function DemoPage() {
                             }
                             setHoverDate(date);
                           }}
-                          className={`aspect-square min-h-[48px] rounded-[14px] border p-1 text-left transition ${
+                          className={`aspect-square min-h-[38px] rounded-[14px] border p-1 text-left transition sm:min-h-[48px] ${
                             isBlocked
                               ? "cursor-not-allowed border-stone-100 bg-stone-100 text-stone-300 line-through"
                               : isSelectedStart || isSelectedEnd || isPreviewEnd
@@ -721,7 +776,7 @@ export function DemoPage() {
                           <div className="flex h-full flex-col justify-between">
                             <span className="text-[11px] sm:text-xs">{Number(date.slice(-2))}</span>
                             <span
-                              className={`text-[8px] sm:text-[9px] ${
+                              className={`block truncate text-[7px] leading-3 sm:text-[9px] sm:leading-4 ${
                                 isBlocked
                                   ? "text-stone-300"
                                   : isSelectedStart || isSelectedEnd || isPreviewEnd
@@ -731,7 +786,11 @@ export function DemoPage() {
                                       : "text-stone-500"
                               }`}
                             >
-                              {isBlocked ? "Booked" : "GBP 180"}
+                              {isBlocked ? "Booked" : (
+                                <>
+                                  <span className="sm:inline hidden">GBP </span>180
+                                </>
+                              )}
                             </span>
                           </div>
                         </button>
@@ -981,7 +1040,7 @@ export function DemoPage() {
       </section>
 
       <section id="reviews" className="container-shell section-spacing">
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {reviews.map((review) => (
             <div
               key={review.name}
@@ -1017,7 +1076,7 @@ export function DemoPage() {
           </div>
           <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="p-4 sm:p-5">
-              <div className="h-[420px] overflow-hidden rounded-[24px] ring-1 ring-stone-200 lg:h-[520px]">
+              <div className="h-[320px] overflow-hidden rounded-[24px] ring-1 ring-stone-200 sm:h-[420px] lg:h-[520px]">
                 {shouldRenderMap ? (
                   <Suspense fallback={<div className="h-full w-full bg-[#efe4d4]" />}>
                     <PropertyMap position={propertyPosition} />
@@ -1082,7 +1141,7 @@ export function DemoPage() {
       </section>
 
       <section className="container-shell pb-16 sm:pb-20">
-        <div className="rounded-[32px] border border-stone-200 bg-white p-8 shadow-[0_24px_60px_rgba(28,25,23,0.08)]">
+        <div className="rounded-[32px] border border-stone-200 bg-white p-6 shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:p-8">
           <div>
             <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">Booking promise</p>
             <h2 className="mt-4 text-4xl text-stone-900">Book now for the best rate.</h2>
@@ -1125,7 +1184,7 @@ export function DemoPage() {
             </div>
           </div>
           <div className="mt-8 flex flex-col gap-3 border-t border-stone-300/70 pt-6 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>(c) 2026 Foxglove Hollow Cottage. All rights reserved.</p>
+            <p>© 2026 Foxglove Hollow Cottage. All rights reserved.</p>
             <p>Direct booking. Best-rate promise.</p>
           </div>
         </div>

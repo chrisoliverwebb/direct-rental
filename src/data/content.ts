@@ -20,7 +20,7 @@ import outsideWebp from "../static/outside.webp";
 export const platformPainPoints = [
   {
     title: "Fees eat into every stay",
-    copy: "Strong occupancy still loses margin when Airbnb and Booking.com take their cut first.",
+    copy: "Strong occupancy still loses margin when booking platforms take their cut first.",
   },
   {
     title: "You do not own the guest relationship",

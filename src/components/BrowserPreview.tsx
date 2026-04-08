@@ -11,12 +11,12 @@ export function BrowserPreview() {
         <span className="h-3 w-3 rounded-full bg-rose-300" />
         <span className="h-3 w-3 rounded-full bg-amber-300" />
         <span className="h-3 w-3 rounded-full bg-emerald-300" />
-        <div className="ml-3 rounded-full bg-white px-4 py-1 text-xs text-ink/50 shadow-sm">
-          foxglovehollow.directrental.co
+        <div className="ml-3 max-w-[calc(100%-3.75rem)] truncate rounded-full bg-white px-4 py-1 text-xs text-ink/50 shadow-sm">
+          directrental.uk
         </div>
       </div>
       <div className="grid gap-4 bg-white p-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="relative min-h-[320px] overflow-hidden rounded-[24px] lg:col-span-2">
+        <div className="relative min-h-[260px] overflow-hidden rounded-[24px] sm:min-h-[320px] lg:col-span-2">
           <ResponsiveImage
             image={{
               avif: featureAvif,
@@ -36,7 +36,7 @@ export function BrowserPreview() {
             </p>
             <div className="mt-4 flex flex-col items-center gap-4 text-center">
               <div>
-                <h3 className="text-3xl">Foxglove Hollow Cottage</h3>
+                <h3 className="text-2xl sm:text-3xl">Foxglove Hollow Cottage</h3>
                 <p className="mt-3 max-w-md text-sm text-white/80">
                   A calm, design-led countryside stay for families and weekend escapes.
                 </p>
