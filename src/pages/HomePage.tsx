@@ -127,7 +127,7 @@ export function HomePage() {
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex h-full flex-col rounded-[28px] bg-[#ff5a5f] p-6 text-white shadow-soft">
+            <div className="flex h-full flex-col rounded-[28px] bg-[#ff5a5f] p-5 text-white shadow-soft sm:p-6">
               <p className="text-sm uppercase tracking-[0.24em] text-white/60">Booking site</p>
               <div className="mt-4 space-y-2">
                 <h3 className="text-2xl sm:text-3xl">
@@ -138,17 +138,17 @@ export function HomePage() {
                   Minus guest fee impact: {APPROX} 15%
                 </p>
               </div>
-              <div className="mt-8 rounded-[22px] bg-white/10 p-5">
+              <div className="mt-6 rounded-[22px] bg-white/10 p-4 sm:mt-8 sm:p-5">
                 <p className="text-2xl font-semibold sm:text-3xl">
                   You receive {APPROX} {GBP}820
                 </p>
               </div>
-              <div className="mt-auto rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
+              <div className="mt-6 rounded-[22px] bg-white/10 p-4 text-sm text-white/75 sm:mt-auto">
                 Less profit, less control, and a weaker direct relationship with the guest.
               </div>
             </div>
 
-            <div className="rounded-[28px] bg-pine p-6 text-white shadow-soft">
+            <div className="flex h-full flex-col rounded-[28px] bg-pine p-5 text-white shadow-soft sm:p-6">
               <p className="text-sm uppercase tracking-[0.24em] text-white/60">Direct Rental</p>
               <div className="mt-4 space-y-2">
                 <h3 className="text-2xl sm:text-3xl">
@@ -157,7 +157,7 @@ export function HomePage() {
                 <p className="text-base text-white/80">No platform commission</p>
                 <p className="text-base text-white/80">From {GBP}19/month per property</p>
               </div>
-              <div className="mt-8 rounded-[22px] bg-white/10 p-5">
+              <div className="mt-6 rounded-[22px] bg-white/10 p-4 sm:mt-8 sm:p-5">
                 <p className="text-2xl font-semibold sm:text-3xl">
                   You receive {GBP}1,000*
                 </p>
@@ -166,7 +166,7 @@ export function HomePage() {
                 * Example shown for direct payment. For online payments, a small payment processing
                 fee (typically 1% to 3%) will be deducted.
               </p>
-              <div className="mt-8 rounded-[22px] bg-white/10 p-4 text-sm text-white/75">
+              <div className="mt-6 rounded-[22px] bg-white/10 p-4 text-sm text-white/75 sm:mt-auto">
                 Better margins, stronger brand, and a direct relationship with the guest.
               </div>
             </div>

@@ -773,10 +773,12 @@ export function DemoPage() {
                                   : "border-stone-200 bg-white text-stone-800 hover:border-[#caa27f] hover:bg-[#fbf6ef]"
                           }`}
                         >
-                          <div className="flex h-full flex-col justify-between">
-                            <span className="text-[11px] sm:text-xs">{Number(date.slice(-2))}</span>
+                          <div className="flex h-full flex-col justify-center sm:justify-between">
+                            <span className="text-center text-[11px] sm:text-left sm:text-xs">
+                              {Number(date.slice(-2))}
+                            </span>
                             <span
-                              className={`block truncate text-[7px] leading-3 sm:text-[9px] sm:leading-4 ${
+                              className={`hidden truncate text-[7px] leading-3 sm:block sm:text-[9px] sm:leading-4 ${
                                 isBlocked
                                   ? "text-stone-300"
                                   : isSelectedStart || isSelectedEnd || isPreviewEnd
@@ -786,17 +788,16 @@ export function DemoPage() {
                                       : "text-stone-500"
                               }`}
                             >
-                              {isBlocked ? "Booked" : (
-                                <>
-                                  <span className="sm:inline hidden">GBP </span>180
-                                </>
-                              )}
+                              {isBlocked ? "Booked" : `GBP ${nightlyRate}`}
                             </span>
                           </div>
                         </button>
                       );
                     })}
                   </div>
+                  <p className="mt-3 text-center text-xs text-stone-500 sm:hidden">
+                    From GBP {nightlyRate} per night
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-4 text-xs text-stone-500">
                     <span className="flex items-center gap-2">
                       <span className="h-3 w-3 rounded-full bg-[#9a5f3c]" />

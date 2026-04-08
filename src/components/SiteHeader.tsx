@@ -15,7 +15,7 @@ export function SiteHeader() {
         </Link>
         <a
           href="/#lead-form"
-          className="w-full rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine/90 sm:w-auto"
+          className="hidden rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine/90 sm:inline-flex sm:w-auto"
         >
           Join early access
         </a>
