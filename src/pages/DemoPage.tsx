@@ -41,7 +41,10 @@ export function DemoPage() {
   );
 
   const [isHostOverlayVisible, setIsHostOverlayVisible] = useState(true);
+  const [isHostOverlayDismissed, setIsHostOverlayDismissed] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isGalleryLightboxOpen, setIsGalleryLightboxOpen] = useState(false);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [bookingStep, setBookingStep] = useState<1 | 2>(1);
   const [calendarMonthIndex, setCalendarMonthIndex] = useState(0);
@@ -49,7 +52,7 @@ export function DemoPage() {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [hoverDate, setHoverDate] = useState("");
-  const [guestCount, setGuestCount] = useState(2);
+  const [guestCount, setGuestCount] = useState(1);
   const [hasPets, setHasPets] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -62,6 +65,7 @@ export function DemoPage() {
   const [isBookingComplete, setIsBookingComplete] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [shouldRenderMap, setShouldRenderMap] = useState(false);
+  const bookingSectionRef = useRef<HTMLDivElement | null>(null);
   const locationSectionRef = useRef<HTMLDivElement | null>(null);
   const lastScrollYRef = useRef(0);
   const scrollRafRef = useRef<number | null>(null);
@@ -91,6 +95,7 @@ export function DemoPage() {
     isRangeAvailable(checkIn, checkOut);
   const hasValidGuestDetails =
     Boolean(firstName && lastName && email) && hasValidEmail && hasValidPhone;
+  const isMobileBookingOverlayOpen = isMobileViewport && bookingStep === 2 && !isBookingComplete;
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -101,6 +106,21 @@ export function DemoPage() {
   }, [heroImages.length]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    if (isHostOverlayDismissed) {
+      setIsHostOverlayVisible(false);
+      return;
+    }
+
     lastScrollYRef.current = window.scrollY || 0;
 
     const onScroll = () => {
@@ -109,31 +129,8 @@ export function DemoPage() {
       scrollRafRef.current = window.requestAnimationFrame(() => {
         scrollRafRef.current = null;
         const y = window.scrollY || 0;
-        const last = lastScrollYRef.current;
         lastScrollYRef.current = y;
-
-        const viewportBottom = y + window.innerHeight;
-        const docHeight = document.documentElement.scrollHeight;
-        const nearBottom = docHeight - viewportBottom < 160;
-
-        if (nearBottom) {
-          setIsHostOverlayVisible(false);
-          return;
-        }
-
-        if (y < 120) {
-          setIsHostOverlayVisible(true);
-          return;
-        }
-
-        if (y > last + 10) {
-          setIsHostOverlayVisible(false);
-          return;
-        }
-
-        if (y < last - 10) {
-          setIsHostOverlayVisible(true);
-        }
+        setIsHostOverlayVisible(y < 140);
       });
     };
 
@@ -144,7 +141,29 @@ export function DemoPage() {
         window.cancelAnimationFrame(scrollRafRef.current);
       }
     };
-  }, []);
+  }, [isHostOverlayDismissed]);
+
+  useEffect(() => {
+    const shouldLockScroll =
+      isGalleryLightboxOpen || isConfirmationOpen || isMobileBookingOverlayOpen;
+    const previousOverflow = document.body.style.overflow;
+
+    if (shouldLockScroll) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isConfirmationOpen, isGalleryLightboxOpen, isMobileBookingOverlayOpen]);
+
+  useEffect(() => {
+    if (!isBookingComplete || !isMobileViewport) return;
+
+    window.requestAnimationFrame(() => {
+      bookingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [isBookingComplete, isMobileViewport]);
 
   useEffect(() => {
     const element = locationSectionRef.current;
@@ -293,7 +312,7 @@ export function DemoPage() {
     setCheckIn("");
     setCheckOut("");
     setHoverDate("");
-    setGuestCount(2);
+    setGuestCount(1);
     setHasPets(false);
     setFirstName("");
     setLastName("");
@@ -305,6 +324,7 @@ export function DemoPage() {
     setIsConfirmationOpen(false);
     setIsBookingComplete(false);
     setShowConfetti(false);
+    setIsGalleryLightboxOpen(false);
   };
 
   useEffect(() => {
@@ -339,24 +359,118 @@ export function DemoPage() {
     <main className="min-h-screen bg-[#f7f2ea] text-stone-900">
       <div
         className={`fixed bottom-4 left-4 right-4 z-[9999] rounded-[22px] border border-white/80 bg-white/95 p-3 shadow-[0_18px_40px_rgba(28,25,23,0.16)] ring-1 ring-black/5 backdrop-blur-md transition-all duration-300 sm:left-auto sm:right-4 sm:max-w-sm ${
-          isHostOverlayVisible
+          isHostOverlayVisible && !isGalleryLightboxOpen && !isMobileBookingOverlayOpen
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-4 opacity-0"
         }`}
       >
-        <p className="text-[11px] uppercase tracking-[0.24em] text-amber-800/80">Host demo</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-amber-800/80">Host demo</p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsHostOverlayDismissed(true);
+              setIsHostOverlayVisible(false);
+            }}
+            className="rounded-full border border-stone-200 p-2 text-stone-500 transition hover:border-stone-400 hover:text-stone-900 sm:hidden"
+            aria-label="Dismiss host demo banner"
+          >
+            <CloseIcon />
+          </button>
+        </div>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-stone-600">
-            This is an example guest-facing booking website your property could have.
+            This demo shows the kind of direct-booking website DirectRental can build for your property.
           </p>
           <Link
             to="/"
             className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
           >
-            Back to site
+            Back to Direct Rental
           </Link>
         </div>
       </div>
+
+      {isGalleryLightboxOpen ? (
+        <div className="fixed inset-0 z-40 bg-stone-950/95 text-white">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/55">Stay photos</p>
+                <p className="mt-1 text-sm text-white/80">
+                  Photo {selectedImage + 1} of {galleryImages.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGalleryLightboxOpen(false)}
+                className="rounded-full border border-white/15 bg-white/10 p-3 text-white transition hover:bg-white/15"
+                aria-label="Close full screen gallery"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-4 sm:px-6">
+              <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] bg-black/20">
+                <div key={`lightbox-${featuredImage.jpg}`} className="animate-gallery-fade">
+                  <ResponsiveImage
+                    image={featuredImage}
+                    loading="eager"
+                    sizes="100vw"
+                    className="block h-full w-full"
+                    imgClassName="max-h-[72vh] w-full object-contain"
+                  />
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6">
+                  <p className="text-base sm:text-lg">{featuredImage.alt}</p>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-white/10 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedImage(selectedImage === 0 ? galleryImages.length - 1 : selectedImage - 1)
+                  }
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/15"
+                  aria-label="Previous photo"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <div className="grid flex-1 grid-cols-4 gap-2 overflow-hidden sm:grid-cols-6">
+                  {galleryImages.map((image, index) => (
+                    <button
+                      key={`lightbox-thumb-${image.jpg}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedImage(index)}
+                      className={`overflow-hidden rounded-2xl border transition ${
+                        index === selectedImage ? "border-white" : "border-white/10 opacity-70"
+                      }`}
+                      aria-label={`View photo ${index + 1}`}
+                    >
+                      <ResponsiveImage
+                        image={image}
+                        sizes="96px"
+                        className="block h-full w-full"
+                        imgClassName="aspect-[4/3] w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage((selectedImage + 1) % galleryImages.length)}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/15"
+                  aria-label="Next photo"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isConfirmationOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 px-4">
@@ -370,10 +484,7 @@ export function DemoPage() {
               <p className="font-medium text-stone-900">
                 {formatDisplayDate(checkIn)} to {formatDisplayDate(checkOut)}
               </p>
-              <p className="mt-1">
-                {selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"},{" "}
-                {hasPets ? "bringing pets." : "no pets."}
-              </p>
+              <p className="mt-1">{selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"}</p>
               <p className="mt-2">Total payable: GBP {total}</p>
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -470,9 +581,15 @@ export function DemoPage() {
       </section>
 
       <section id="gallery" className="container-shell section-spacing pt-0">
+        <div className="mb-6 sm:mb-8">
+          <div>
+            <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">Stay photos</p>
+            <h2 className="mt-3 text-3xl text-stone-900 sm:text-4xl">See the cottage before you book.</h2>
+          </div>
+        </div>
         <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="flex flex-col gap-4 xl:h-full">
-            <div className="relative aspect-[16/10] overflow-hidden rounded-[30px] shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:min-h-[420px]">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-[30px] text-left shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:min-h-[420px]">
               <div key={featuredImage.jpg} className="animate-gallery-fade h-full w-full">
                 <ResponsiveImage
                   image={featuredImage}
@@ -482,14 +599,31 @@ export function DemoPage() {
                   imgClassName="h-full w-full object-cover object-center"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setIsGalleryLightboxOpen(true)}
+                className="absolute inset-0"
+                aria-label="Open full screen gallery"
+              />
+              <button
+                type="button"
+                onClick={() => setIsGalleryLightboxOpen(true)}
+                className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-stone-950/35 p-3 text-white backdrop-blur-sm transition hover:bg-stone-950/50"
+                aria-label="Open gallery full screen"
+              >
+                <ExpandIcon />
+              </button>
               <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 bg-gradient-to-t from-stone-950/60 to-transparent p-4 text-white sm:flex-row sm:items-end sm:justify-between sm:p-6">
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-white/70">
                     Photo {selectedImage + 1} of {galleryImages.length}
                   </p>
                   <p className="mt-2 text-lg">{featuredImage.alt}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.24em] text-white/70 sm:hidden">
+                    Tap for full-screen viewing
+                  </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="hidden gap-2 sm:flex">
                   <button
                     type="button"
                     onClick={() =>
@@ -516,7 +650,12 @@ export function DemoPage() {
                 <button
                   key={`${image.jpg}-${index}`}
                   type="button"
-                  onClick={() => setSelectedImage(index)}
+                  onClick={() => {
+                    setSelectedImage(index);
+                    if (isMobileViewport) {
+                      setIsGalleryLightboxOpen(true);
+                    }
+                  }}
                   className={`overflow-hidden rounded-[22px] border text-left transition ${
                     index === selectedImage
                       ? "border-stone-900 shadow-[0_18px_40px_rgba(28,25,23,0.14)]"
@@ -557,7 +696,7 @@ export function DemoPage() {
         </div>
       </section>
 
-      <section id="details" className="container-shell section-spacing">
+      <section id="details" ref={bookingSectionRef} className="container-shell section-spacing">
         <div>
           {isBookingComplete ? (
             <div className="booking-shell animate-fade-up rounded-[30px] border border-stone-200 bg-white p-6 shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:p-8 lg:p-10">
@@ -584,10 +723,7 @@ export function DemoPage() {
                 <p className="font-medium text-stone-900">
                   {formatDisplayDate(checkIn)} to {formatDisplayDate(checkOut)}
                 </p>
-                <p className="mt-1">
-                  {selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"},{" "}
-                  {hasPets ? "bringing pets." : "no pets."}
-                </p>
+                <p className="mt-1">{selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"}</p>
                 <p className="mt-2">Total payable: GBP {total}</p>
               </div>
 
@@ -610,47 +746,82 @@ export function DemoPage() {
               id="booking"
               onSubmit={handleBookingSubmit}
               noValidate
-              className="booking-shell rounded-[30px] border border-stone-200 bg-white p-6 shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:p-8 lg:p-10"
+              className={`booking-shell rounded-[30px] border border-stone-200 bg-white p-6 shadow-[0_24px_60px_rgba(28,25,23,0.08)] sm:p-8 lg:p-10 ${
+                isMobileBookingOverlayOpen
+                  ? "mobile-booking-overlay fixed inset-0 z-40 overflow-y-auto rounded-none border-0 p-0 shadow-none"
+                  : ""
+              }`}
             >
-            <div className="flex items-start justify-between gap-4">
+            <div className={isMobileBookingOverlayOpen ? "mx-auto flex min-h-full w-full max-w-2xl flex-col bg-[#fbf7f0]" : ""}>
+            <div className={`flex items-start justify-between gap-4 ${isMobileBookingOverlayOpen ? "border-b border-stone-200 bg-white px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))]" : ""}`}>
               <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">Availability</p>
-                <h3 className="mt-3 text-3xl text-stone-900">Book now for the best rate</h3>
+                <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">
+                  {bookingStep === 1 ? "Availability" : "Your stay"}
+                </p>
+                <h3 className="mt-3 text-3xl text-stone-900">
+                  {isMobileBookingOverlayOpen ? "Complete your booking request" : "Book now for the best rate"}
+                </h3>
+                {isMobileBookingOverlayOpen ? (
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    Your dates are locked in below. Add guest details and send the request in one step.
+                  </p>
+                ) : null}
               </div>
-            </div>
-
-            <div className="mt-6 flex gap-3 text-sm">
-              <button
-                type="button"
-                onClick={() => setBookingStep(1)}
-                className={`rounded-full px-4 py-2 transition ${
-                  bookingStep === 1 ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700"
-                }`}
-              >
-                1. Choose dates
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (validateDates()) {
-                    setBookingStep(2);
-                  }
-                }}
-                disabled={!checkIn || !checkOut || !isRangeAvailable(checkIn, checkOut)}
-                className={`rounded-full px-4 py-2 transition ${
-                  bookingStep === 2 ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-700"
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                2. Guest details
-              </button>
+              {isMobileBookingOverlayOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setBookingStep(1)}
+                  className="rounded-full border border-stone-200 bg-white p-3 text-stone-500 transition hover:border-stone-400 hover:text-stone-900"
+                  aria-label="Back to date selection"
+                >
+                  <CloseIcon />
+                </button>
+              ) : null}
             </div>
 
             {bookingStep === 1 ? (
-              <div className="booking-step animate-fade-up">
-                <div className="mt-6 rounded-[24px] border border-stone-200 bg-[#fcfaf6] p-3">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
+              <div className={`booking-step animate-fade-up ${isMobileBookingOverlayOpen ? "px-5 pb-5" : ""}`}>
+                <div className="mt-6 grid gap-4">
+                  <label className="grid gap-2 text-sm font-medium text-stone-900">
+                    Guests
+                    <div className="flex min-h-[76px] items-center rounded-2xl border border-stone-200 bg-white px-4 py-3">
+                      <div className="flex w-full items-center justify-between gap-4">
+                        <div className="flex flex-1 items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8f4ed] text-stone-900">
+                            <GuestsIcon />
+                          </span>
+                          <div>
+                            <p className="text-base font-medium text-stone-900">
+                              {guestCount} guest{guestCount === 1 ? "" : "s"}
+                            </p>
+                            <p className="text-xs text-stone-500">Minimum 1, maximum 6</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setGuestCount((count) => Math.max(1, count - 1))}
+                            disabled={guestCount === 1}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-lg text-stone-900 transition enabled:hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGuestCount((count) => Math.min(6, count + 1))}
+                            disabled={guestCount === 6}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-lg text-stone-900 transition enabled:hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                <div className="mt-4 rounded-[24px] border border-stone-200 bg-[#fcfaf6] p-3">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between gap-2">
                         <button
                           type="button"
                           onClick={() =>
@@ -664,7 +835,7 @@ export function DemoPage() {
                         <button
                           type="button"
                           onClick={() => setIsMonthPickerOpen((open) => !open)}
-                          className="rounded-full border border-transparent px-2 py-1 text-sm uppercase tracking-[0.22em] text-stone-500 transition hover:border-stone-200 hover:bg-white"
+                          className="flex-1 rounded-full border border-transparent px-2 py-1 text-center text-sm uppercase tracking-[0.22em] text-stone-500 transition hover:border-stone-200 hover:bg-white"
                         >
                           {activeMonth.label}
                         </button>
@@ -680,9 +851,8 @@ export function DemoPage() {
                         >
                           <ChevronRightIcon />
                         </button>
-                      </div>
                     </div>
-                    <div className="text-right text-xs text-stone-500">
+                    <div className="mt-3 hidden text-right text-xs text-stone-500 sm:block">
                       <p>{previewCheckOut ? "Preview" : "Selected"}</p>
                       <p className="mt-1 font-medium text-stone-900">
                         {checkIn ? formatDisplayDate(checkIn) : "Choose stay"}
@@ -813,77 +983,23 @@ export function DemoPage() {
                     </span>
                   </div>
                 </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-sm font-medium text-stone-900">
-                    Guests
-                    <div className="flex min-h-[76px] items-center rounded-2xl border border-stone-200 bg-white px-4 py-3">
-                      <div className="flex w-full items-center justify-between gap-4">
-                        <div className="flex flex-1 items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8f4ed] text-stone-900">
-                            <GuestsIcon />
-                          </span>
-                          <div>
-                            <p className="text-base font-medium text-stone-900">
-                            {guestCount} guest{guestCount === 1 ? "" : "s"}
-                            </p>
-                            <p className="text-xs text-stone-500">Minimum 1, maximum 6</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setGuestCount((count) => Math.max(1, count - 1))}
-                            disabled={guestCount === 1}
-                            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-lg text-stone-900 transition enabled:hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            -
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setGuestCount((count) => Math.min(6, count + 1))}
-                            disabled={guestCount === 6}
-                            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-lg text-stone-900 transition enabled:hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                  <label className="grid gap-2 text-sm font-medium text-stone-900">
-                    Pets
-                    <div className="flex min-h-[76px] items-center justify-between rounded-2xl border border-stone-200 bg-white px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8f4ed] text-stone-900">
-                          <PawIcon />
-                        </span>
-                        <div>
-                          <p className="text-base font-medium text-stone-900">
-                            {hasPets ? "Bringing pets" : "No pets"}
-                          </p>
-                          <p className="text-xs text-stone-500">Pet-friendly stay available</p>
-                        </div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={hasPets}
-                        onChange={(event) => setHasPets(event.target.checked)}
-                        className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900/10"
-                      />
-                    </div>
-                  </label>
-                </div>
               </div>
             ) : (
-              <div className="booking-step mt-6 grid gap-4 animate-fade-up">
-                <div className="rounded-[22px] bg-[#f8f4ed] px-4 py-4 text-sm text-stone-600">
+              <div className={`booking-step mt-6 grid gap-4 animate-fade-up ${isMobileBookingOverlayOpen ? "px-5 pb-5" : ""}`}>
+                <div className={`rounded-[22px] bg-[#f8f4ed] px-4 py-4 text-sm text-stone-600 ${isMobileBookingOverlayOpen ? "border border-[#e6d8c8] bg-white shadow-[0_14px_35px_rgba(28,25,23,0.06)]" : ""}`}>
                   <p className="font-medium text-stone-900">
                     {formatDisplayDate(checkIn)} to {formatDisplayDate(checkOut)}
                   </p>
-                  <p className="mt-1">
-                    {selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"},{" "}
-                    {hasPets ? "bringing pets." : "no pets."}
-                  </p>
+                  <p className="mt-1">{selectedNights} nights, {guestCount} guest{guestCount === 1 ? "" : "s"}</p>
+                  {isMobileBookingOverlayOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep(1)}
+                      className="mt-3 text-sm font-medium text-[#9a5f3c]"
+                    >
+                      Change dates or guest count
+                    </button>
+                  ) : null}
                 </div>
                 <p className="text-sm text-stone-500">
                   Required fields are marked with <span className="font-semibold text-[#9a5f3c]">*</span>
@@ -953,6 +1069,28 @@ export function DemoPage() {
                   ) : null}
                 </label>
                 <label className="grid gap-2 text-sm font-medium text-stone-900">
+                  Pets
+                  <div className="flex min-h-[76px] items-center justify-between rounded-2xl border border-stone-200 bg-white px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f8f4ed] text-stone-900">
+                        <PawIcon />
+                      </span>
+                      <div>
+                        <p className="text-base font-medium text-stone-900">
+                          {hasPets ? "Bringing pets" : "No pets"}
+                        </p>
+                        <p className="text-xs text-stone-500">Pet-friendly stay available</p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={hasPets}
+                      onChange={(event) => setHasPets(event.target.checked)}
+                      className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900/10"
+                    />
+                  </div>
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-stone-900">
                   Special requests
                   <textarea
                     rows={3}
@@ -965,22 +1103,37 @@ export function DemoPage() {
               </div>
             )}
 
-            <div className="mt-6 rounded-[24px] bg-[#f4ecdf] p-5">
+            <div
+              className={`mt-6 rounded-[24px] bg-[#f4ecdf] p-5 ${
+                isMobileBookingOverlayOpen ? "mx-5 mb-5 bg-[#efe4d4]" : ""
+              } ${hasValidDateRange && !isMobileBookingOverlayOpen ? "mobile-booking-summary" : ""}`}
+            >
               {hasValidDateRange ? (
                 <>
-                  <div className="flex items-center justify-between text-sm text-stone-600">
+                  <div className="hidden items-center justify-between text-sm text-stone-600 sm:flex">
                     <span>{selectedNights} nights</span>
                     <span>GBP {subtotal}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-sm text-stone-600">
+                  <div className="mt-3 hidden items-center justify-between text-sm text-stone-600 sm:flex">
                     <span>Cleaning fee</span>
                     <span>GBP {cleaningFee}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-sm text-stone-600">
+                  <div className="mt-3 hidden items-center justify-between text-sm text-stone-600 sm:flex">
                     <span>Service fee</span>
                     <span>GBP 0</span>
                   </div>
-                  <div className="mt-4 border-t border-stone-900/10 pt-4">
+                  <div className="sm:hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-stone-500">Stay total</p>
+                        <p className="mt-1 text-sm text-stone-600">
+                          {selectedNights} nights{cleaningFee ? ` + GBP ${cleaningFee} cleaning` : ""}
+                        </p>
+                      </div>
+                      <p className="text-lg font-semibold text-stone-900">GBP {total}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 hidden border-t border-stone-900/10 pt-4 sm:block">
                     <div className="flex items-center justify-between text-base font-semibold text-stone-900">
                       <span>Total</span>
                       <span>GBP {total}</span>
@@ -1000,19 +1153,19 @@ export function DemoPage() {
               )}
             </div>
 
-            <div className="mt-5 flex items-center gap-3 text-sm text-stone-500">
+            <div className={`mt-5 flex items-center gap-3 text-sm text-stone-500 ${isMobileBookingOverlayOpen ? "px-5" : ""}`}>
               <ShieldIcon />
               <span>Secure booking request. You will receive host confirmation by email.</span>
             </div>
 
             {bookingError ? (
-              <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700 animate-fade-up">
+              <p className={`mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700 animate-fade-up ${isMobileBookingOverlayOpen ? "mx-5" : ""}`}>
                 {bookingError}
               </p>
             ) : null}
 
             {bookingSuccess ? (
-              <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 animate-pulse-soft">
+              <p className={`mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 animate-pulse-soft ${isMobileBookingOverlayOpen ? "mx-5" : ""}`}>
                 {bookingSuccess}
               </p>
             ) : null}
@@ -1022,7 +1175,11 @@ export function DemoPage() {
                 type="button"
                 onClick={handleContinue}
                 disabled={!hasValidDateRange}
-                className="mt-6 w-full rounded-full bg-stone-900 px-6 py-4 text-base font-medium text-white transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:hover:translate-y-0 disabled:hover:bg-stone-200"
+                className={`mt-6 rounded-full bg-stone-900 px-6 py-4 text-base font-medium text-white transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:hover:translate-y-0 disabled:hover:bg-stone-200 ${
+                  isMobileBookingOverlayOpen
+                    ? "mx-5 mb-[max(1rem,env(safe-area-inset-bottom))] mt-auto block"
+                    : "mobile-booking-cta w-full"
+                }`}
               >
                 {hasValidDateRange ? "Continue" : "Please select check-in and check-out"}
               </button>
@@ -1030,17 +1187,26 @@ export function DemoPage() {
               <button
                 type="submit"
                 disabled={!hasValidGuestDetails}
-                className="mt-6 w-full rounded-full bg-stone-900 px-6 py-4 text-base font-medium text-white transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:hover:translate-y-0 disabled:hover:bg-stone-200"
+                className={`mt-6 rounded-full bg-stone-900 px-6 py-4 text-base font-medium text-white transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:hover:translate-y-0 disabled:hover:bg-stone-200 ${
+                  isMobileBookingOverlayOpen
+                    ? "mx-5 mb-[max(1rem,env(safe-area-inset-bottom))] mt-auto block"
+                    : "mobile-booking-cta w-full"
+                }`}
               >
                 {hasValidGuestDetails ? "Request booking" : "Please complete required fields"}
               </button>
             )}
+            </div>
             </form>
           )}
         </div>
       </section>
 
       <section id="reviews" className="container-shell section-spacing">
+        <div className="mb-8 max-w-2xl sm:mb-10">
+          <p className="text-sm uppercase tracking-[0.24em] text-amber-800/80">Guest reviews</p>
+          <h2 className="mt-3 text-3xl text-stone-900 sm:text-4xl">What guests loved about their stay.</h2>
+        </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {reviews.map((review) => (
             <div
@@ -1172,7 +1338,7 @@ export function DemoPage() {
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Foxglove Hollow Cottage</p>
               <p className="mt-3 max-w-md text-base leading-7 text-stone-700">
-                A fictional countryside holiday cottage demo for direct bookings, weekend escapes, and longer stays.
+                This is a demo site for a completely fictional holiday cottage in a made-up location, created to show how a DirectRental booking website can feel.
               </p>
             </div>
             <div>
@@ -1186,7 +1352,7 @@ export function DemoPage() {
           </div>
           <div className="mt-8 flex flex-col gap-3 border-t border-stone-300/70 pt-6 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Foxglove Hollow Cottage. All rights reserved.</p>
-            <p>Direct booking. Best-rate promise.</p>
+            <p>Powered by DirectRental</p>
           </div>
         </div>
       </footer>
@@ -1313,6 +1479,21 @@ function ChevronRightIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-current" fill="none" strokeWidth="2" aria-hidden="true">
       <path d="M9 18l6-6-6-6" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-current" fill="none" strokeWidth="2" aria-hidden="true">
+      <path d="M9 4H4v5" />
+      <path d="M15 4h5v5" />
+      <path d="M9 20H4v-5" />
+      <path d="M15 20h5v-5" />
+      <path d="M10 4L4 10" />
+      <path d="M14 4l6 6" />
+      <path d="M4 14l6 6" />
+      <path d="M20 14l-6 6" />
     </svg>
   );
 }

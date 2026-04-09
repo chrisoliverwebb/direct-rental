@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" role="img" aria-label="Direct Rental">
+  <rect width="500" height="500" rx="84" fill="#1f4d3f"/>
+  <g fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M83 396V198L250 83l167 115v198"/>
+    <path d="M188 396V292h125v104"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="167" cy="229" r="10"/>
+    <circle cx="333" cy="229" r="10"/>
+  </g>
+</svg>
