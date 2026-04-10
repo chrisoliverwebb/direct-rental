@@ -1,12 +1,11 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHEETS_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL as string | undefined;
 const SHEETS_SECRET = import.meta.env.VITE_GOOGLE_SHEETS_SECRET as string | undefined;
+const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/3cI6oI0nKcV18Apew763K00";
 
 export function LeadForm() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +78,7 @@ export function LeadForm() {
       form.reset();
       setEmail("");
       setTouched(false);
-      navigate("/thank-you");
+      window.location.assign(STRIPE_CHECKOUT_URL);
     } catch (error) {
       console.error("Failed to submit early access lead:", error, payload);
       setSubmitError("We couldn't submit your request. Please try again.");
