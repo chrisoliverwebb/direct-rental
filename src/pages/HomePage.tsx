@@ -6,6 +6,43 @@ import { usePageMeta } from "../lib/usePageMeta";
 
 const GBP = "\u00a3";
 const APPROX = "\u2248";
+const syncCalendarDays = [
+  null,
+  null,
+  null,
+  { day: 1 },
+  { day: 2, bookingSource: "airbnb" },
+  { day: 3, bookingSource: "airbnb" },
+  { day: 4, bookingSource: "airbnb" },
+  { day: 5, bookingSource: "airbnb" },
+  { day: 6 },
+  { day: 7 },
+  { day: 8 },
+  { day: 9, bookingSource: "direct" },
+  { day: 10, bookingSource: "direct" },
+  { day: 11, bookingSource: "direct" },
+  { day: 12, bookingSource: "direct" },
+  { day: 13 },
+  { day: 14 },
+  { day: 15 },
+  { day: 16 },
+  { day: 17, bookingSource: "booking" },
+  { day: 18, bookingSource: "booking" },
+  { day: 19, bookingSource: "vrbo" },
+  { day: 20, bookingSource: "vrbo" },
+  { day: 21, bookingSource: "vrbo" },
+  { day: 22 },
+  { day: 23, bookingSource: "direct" },
+  { day: 24, bookingSource: "direct" },
+  { day: 25, bookingSource: "direct" },
+  { day: 26, bookingSource: "direct" },
+  { day: 27, bookingSource: "direct" },
+  { day: 28, bookingSource: "direct" },
+  { day: 29 },
+  { day: 30 },
+  null,
+  null,
+];
 
 export function HomePage() {
   usePageMeta(
@@ -174,6 +211,84 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="container-shell section-spacing pt-0">
+        <div className="card-surface overflow-hidden">
+          <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+            <div className="max-w-2xl">
+              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Calendar sync</p>
+              <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+                Keep your availability in sync across booking sites
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-ink/70">
+                Sync with Airbnb, Booking.com, Vrbo, and other booking sites.
+              </p>
+              <p className="mt-4 text-lg leading-8 text-ink/70">
+                Fewer manual updates and less risk of double bookings.
+              </p>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <PlatformBadge
+                  name="Airbnb"
+                  accent="bg-[#ff5a5f]"
+                  textColor="text-white"
+                  logoSrc="/platforms/airbnb.svg"
+                />
+                <PlatformBadge
+                  name="Booking.com"
+                  accent="bg-[#003580]"
+                  textColor="text-white"
+                  logoSrc="/platforms/booking.png"
+                />
+                <PlatformBadge
+                  name="Vrbo"
+                  accent="bg-[#0E214B]"
+                  textColor="text-white"
+                  logoSrc="/platforms/vrbo.svg"
+                />
+                <PlatformBadge name="Other sites" accent="bg-[#edf5f1]" textColor="text-pine" />
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-[#e7ddd0] bg-[#fcfaf6] p-4 shadow-soft sm:p-5">
+              <div className="rounded-[24px] border border-[#efe7db] bg-white p-4">
+                  <div className="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.18em] text-ink/40">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+                  <div className="mt-3 grid grid-cols-7 gap-2">
+                    {syncCalendarDays.map((entry, index) => {
+                      if (!entry) {
+                        return <div key={`empty-${index}`} className="aspect-square rounded-2xl bg-transparent" />;
+                      }
+
+                      return (
+                        <div
+                          key={entry.day}
+                          className={[
+                            "flex aspect-square items-center justify-center rounded-2xl text-sm",
+                            entry.bookingSource === "airbnb"
+                              ? "bg-[#ff5a5f] text-white"
+                              : entry.bookingSource === "booking"
+                                ? "bg-[#003b95] text-white"
+                                : entry.bookingSource === "vrbo"
+                                  ? "bg-[#0E214B] text-white"
+                                  : entry.bookingSource === "direct"
+                                    ? "bg-[#b8d7c8] text-[#1f4b39]"
+                                    : "border border-[#eee5d8] bg-white text-ink/70",
+                          ].join(" ")}
+                        >
+                          {entry.day}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="container-shell section-spacing">
         <div>
           <div className="max-w-3xl">
@@ -309,5 +424,40 @@ function SparkArrowIcon() {
       <path d="M9 6h7v7" />
       <path d="M5.5 9.5l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" />
     </svg>
+  );
+}
+
+type PlatformBadgeProps = {
+  name: string;
+  accent: string;
+  textColor: string;
+  logoSrc?: string;
+};
+
+function PlatformBadge({ name, accent, textColor, logoSrc }: PlatformBadgeProps) {
+  return (
+    <div className="flex items-center gap-3 rounded-[20px] border border-[#efe7db] bg-white px-4 py-3">
+      {logoSrc ? (
+        <span
+          className={[
+            "flex h-12 min-w-12 items-center justify-center rounded-full px-2",
+            accent,
+          ].join(" ")}
+        >
+          <img src={logoSrc} alt={`${name} logo`} className="h-7 w-auto max-w-[92px]" />
+        </span>
+      ) : (
+        <span
+          className={[
+            "flex h-12 min-w-12 items-center justify-center rounded-full px-3 text-xs font-semibold uppercase tracking-[0.14em]",
+            accent,
+            textColor,
+          ].join(" ")}
+        >
+          +
+        </span>
+      )}
+      <p className="text-sm font-semibold text-ink">{name}</p>
+    </div>
   );
 }
