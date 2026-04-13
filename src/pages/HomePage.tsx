@@ -55,26 +55,26 @@ export function HomePage() {
       <SiteHeader />
 
       <section className="container-shell section-spacing">
-        <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="grid items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="max-w-2xl">
-            <h1 className="max-w-xl text-4xl leading-tight text-ink sm:text-6xl">
+            <h1 className="max-w-3xl text-4xl leading-tight text-ink sm:text-5xl">
               Stop losing fees to booking platforms. Take bookings directly.
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-ink/70">
+            <p className="mt-5 max-w-xl text-lg leading-8 text-ink/70">
               We build direct booking websites for holiday rental owners who
               want to move away from manual bookings and reduce reliance on
               booking platforms.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#lead-form"
-                className="rounded-full bg-pine px-6 py-4 text-center text-base font-medium text-white transition hover:bg-pine/90"
+                className="button-primary"
               >
                 Get your site
               </a>
               <Link
                 to="/demo"
-                className="rounded-full border border-ink/10 bg-white/80 px-6 py-4 text-center text-base font-medium text-ink transition hover:border-ink/20 hover:bg-white"
+                className="button-secondary"
               >
                 View example property
               </Link>
@@ -87,16 +87,15 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="container-shell section-spacing">
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
         <div>
-          <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
-            How it works
-          </p>
-          <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+          <p className="eyebrow-label">How it works</p>
+          <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
             Simple to get started
           </h2>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-7 grid gap-4 lg:grid-cols-3">
             {[
               {
                 title: "We build your website",
@@ -113,18 +112,18 @@ export function HomePage() {
                 ],
               },
             ].map((step, index) => (
-              <div key={step.title} className="card-surface p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pine/10 text-lg font-semibold text-pine">
+              <div key={step.title} className="card-surface p-5 sm:p-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-pine/10 text-base font-semibold text-pine">
                   {index + 1}
                 </div>
-                <p className="mt-5 text-xl text-ink">{step.title}</p>
-                <div className="mt-5 grid gap-3">
+                <p className="mt-4 text-lg text-ink">{step.title}</p>
+                <div className="mt-4 grid gap-3">
                   {step.points.map((point) => (
                     <div
                       key={point}
                       className="flex items-start gap-3 text-sm text-ink/75"
                     >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pine/10 text-pine">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
                         <CheckIcon />
                       </span>
                       <span>{point}</span>
@@ -135,25 +134,24 @@ export function HomePage() {
             ))}
           </div>
         </div>
+        </div>
       </section>
 
       <section className="container-shell section-spacing">
         <div className="card-surface overflow-hidden">
-          <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="grid gap-8 px-6 py-7 sm:px-7 sm:py-8 lg:grid-cols-[0.78fr_1.22fr]">
             <div className="max-w-lg">
-              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
-                Demo
-              </p>
-              <h2 className="mt-4 text-4xl text-ink">
+              <p className="eyebrow-label">Demo</p>
+              <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
                 This is what your property could look like
               </h2>
-              <p className="mt-4 text-lg leading-8 text-ink/70">
+              <p className="mt-4 text-base leading-7 text-ink/70">
                 A modern, mobile-friendly website designed to help guests book
                 direct with you.
               </p>
               <Link
                 to="/demo"
-                className="mt-8 inline-flex rounded-full bg-pine px-6 py-4 text-base font-medium text-white transition hover:bg-pine/90"
+                className="button-primary mt-8"
               >
                 View example property
               </Link>
@@ -165,21 +163,19 @@ export function HomePage() {
 
       <section className="container-shell section-spacing pt-0">
         <div className="card-surface overflow-hidden">
-          <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+          <div className="grid gap-8 px-6 py-7 sm:px-7 sm:py-8 lg:grid-cols-[1fr_0.95fr] lg:items-center">
             <div className="max-w-2xl">
-              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
-                Calendar sync
-              </p>
-              <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+              <p className="eyebrow-label">Calendar sync</p>
+              <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
                 Keep your availability in sync across booking sites
               </h2>
-              <p className="mt-5 text-lg leading-8 text-ink/70">
+              <p className="mt-4 text-base leading-7 text-ink/70">
                 Sync with Airbnb, Booking.com, Vrbo, and other booking sites.
               </p>
-              <p className="mt-4 text-lg leading-8 text-ink/70">
+              <p className="mt-3 text-base leading-7 text-ink/70">
                 Fewer manual updates and less risk of double bookings.
               </p>
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <PlatformBadge
                   name="Airbnb"
                   accent="bg-[#ff5a5f]"
@@ -206,8 +202,8 @@ export function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-[#e7ddd0] bg-[#fcfaf6] p-4 shadow-soft sm:p-5">
-              <div className="rounded-[24px] border border-[#efe7db] bg-white p-4">
+            <div className="rounded-[14px] border border-pine/10 bg-white p-4">
+              <div className="rounded-[10px] border border-slate-200/80 bg-white p-4">
                 <div className="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.18em] text-ink/40">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
                     (day) => (
@@ -221,7 +217,7 @@ export function HomePage() {
                       return (
                         <div
                           key={`empty-${index}`}
-                          className="aspect-square rounded-2xl bg-transparent"
+                          className="aspect-square rounded-lg bg-transparent"
                         />
                       );
                     }
@@ -230,7 +226,7 @@ export function HomePage() {
                       <div
                         key={entry.day}
                         className={[
-                          "flex aspect-square items-center justify-center rounded-2xl text-sm",
+                          "flex aspect-square items-center justify-center rounded-lg text-sm font-medium",
                           entry.bookingSource === "airbnb"
                             ? "bg-[#ff5a5f] text-white"
                             : entry.bookingSource === "booking"
@@ -239,7 +235,7 @@ export function HomePage() {
                                 ? "bg-[#0E214B] text-white"
                                 : entry.bookingSource === "direct"
                                   ? "bg-[#b8d7c8] text-[#1f4b39]"
-                                  : "border border-[#eee5d8] bg-white text-ink/70",
+                                  : "border border-slate-200/80 bg-white text-ink/70",
                         ].join(" ")}
                       >
                         {entry.day}
@@ -256,14 +252,12 @@ export function HomePage() {
       <section className="container-shell section-spacing">
         <div>
           <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
-              Traffic
-            </p>
-            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+            <p className="eyebrow-label">Traffic</p>
+            <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
               We don&apos;t just build your site, we help you get bookings
             </h2>
           </div>
-          <div className="mt-8 card-surface grid gap-4 p-6 sm:p-8">
+          <div className="mt-7 grid gap-3 lg:grid-cols-2">
             {[
               {
                 title: "Search-friendly from day one",
@@ -288,9 +282,9 @@ export function HomePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-4 rounded-[22px] border border-pine/10 bg-white/60 p-4"
+                className="card-surface flex items-start gap-4 p-5"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pine/10 text-pine">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
                   {item.icon}
                 </span>
                 <div>
@@ -308,15 +302,13 @@ export function HomePage() {
       </section>
 
       <section id="lead-form" className="container-shell section-spacing">
-        <div className="card-surface p-6 sm:p-8">
+        <div className="card-surface p-6 sm:p-7">
           <div className="mx-auto mb-8 max-w-2xl text-center">
-            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
-              Get Started
-            </p>
-            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+            <p className="eyebrow-label">Get started</p>
+            <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
               Get your own direct booking website
             </h2>
-            <p className="mt-4 text-lg leading-8 text-ink/70">
+            <p className="mt-4 text-base leading-7 text-ink/70">
               Tell us a bit about your property and current setup, and we’ll see
               if Direct Rental is a good fit.
             </p>

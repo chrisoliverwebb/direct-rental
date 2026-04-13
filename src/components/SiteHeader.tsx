@@ -8,14 +8,14 @@ export function SiteHeader() {
           to="/"
           className="flex items-center gap-3 text-center text-sm font-semibold uppercase tracking-[0.24em] text-pine sm:text-left"
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pine text-white shadow-sm">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-pine text-white">
             <LogoMark />
           </span>
           Direct Rental
         </Link>
         <a
           href="/#lead-form"
-          className="hidden rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine/90 sm:inline-flex sm:w-auto"
+          className="button-primary hidden text-sm sm:inline-flex sm:w-auto"
         >
           Get Started
         </a>

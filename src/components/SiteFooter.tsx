@@ -6,7 +6,7 @@ export function SiteFooter() {
       <div className="container-shell py-10">
         <div className="grid gap-8 md:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-pine/70">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-pine/70">
               Direct Rental
             </p>
             <p className="mt-3 max-w-md text-base leading-7 text-ink/70">

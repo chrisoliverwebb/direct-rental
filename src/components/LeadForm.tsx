@@ -106,7 +106,7 @@ export function LeadForm() {
           <input
             name="name"
             placeholder="Jane Smith"
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+            className="input-field"
           />
         </label>
         <label className="grid gap-2 text-sm font-medium text-ink">
@@ -125,7 +125,7 @@ export function LeadForm() {
             placeholder="you@yourproperty.com"
             aria-invalid={showError}
             aria-describedby="lead-email-help lead-email-error"
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+            className="input-field"
           />
         </label>
       </div>
@@ -135,7 +135,7 @@ export function LeadForm() {
           <select
             name="properties"
             defaultValue=""
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+            className="input-field"
           >
             <option value="">Select an option</option>
             <option>1</option>
@@ -149,7 +149,7 @@ export function LeadForm() {
           <input
             name="platforms"
             placeholder="e.g. booking platforms, direct, other"
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15"
+            className="input-field"
           />
         </label>
       </div>
@@ -166,7 +166,7 @@ export function LeadForm() {
       <button
         type="submit"
         disabled={!isValidEmail || isSubmitting}
-        className="rounded-full bg-pine px-6 py-3 text-base font-medium text-white transition hover:bg-pine/90 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:hover:bg-slate-200"
+        className="button-primary disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:hover:bg-slate-200"
       >
         {isSubmitting ? "Submitting..." : "Get Started"}
       </button>

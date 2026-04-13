@@ -59,6 +59,7 @@ export function BrowserPreview() {
                 <span className="rounded-full bg-white px-5 py-3 text-sm font-medium text-ink">
                   Book now
                 </span>
+              
             </div>
           </div>
         </div>

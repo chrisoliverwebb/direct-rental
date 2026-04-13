@@ -22,7 +22,7 @@ export function LegalPage({ eyebrow, title, lastUpdated, intro, sections }: Lega
 
       <section className="container-shell section-spacing">
         <div className="card-surface mx-auto max-w-4xl px-6 py-10 sm:px-10 sm:py-12">
-          <p className="text-sm uppercase tracking-[0.28em] text-pine/80">{eyebrow}</p>
+          <p className="eyebrow-label">{eyebrow}</p>
           <h1 className="mt-4 text-4xl text-ink sm:text-5xl">{title}</h1>
           <p className="mt-4 text-sm text-ink/55">Last updated: {lastUpdated}</p>
           {intro ? <div className="mt-6 text-lg leading-8 text-ink/70">{intro}</div> : null}
