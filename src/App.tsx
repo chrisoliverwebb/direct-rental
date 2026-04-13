@@ -7,6 +7,15 @@ const DemoPage = lazy(() =>
 const HomePage = lazy(() =>
   import("./pages/HomePage").then((module) => ({ default: module.HomePage })),
 );
+const TermsPage = lazy(() =>
+  import("./pages/TermsPage").then((module) => ({ default: module.TermsPage })),
+);
+const PrivacyPolicyPage = lazy(() =>
+  import("./pages/PrivacyPolicyPage").then((module) => ({ default: module.PrivacyPolicyPage })),
+);
+const DpaPage = lazy(() =>
+  import("./pages/DpaPage").then((module) => ({ default: module.DpaPage })),
+);
 const ThankYouPage = lazy(() =>
   import("./pages/ThankYouPage").then((module) => ({ default: module.ThankYouPage })),
 );
@@ -17,6 +26,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/demo" element={<DemoPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/dpa" element={<DpaPage />} />
         <Route path="/thank-you" element={<ThankYouPage />} />
       </Routes>
     </Suspense>
