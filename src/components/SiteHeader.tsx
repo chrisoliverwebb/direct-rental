@@ -17,7 +17,7 @@ export function SiteHeader() {
           href="/#lead-form"
           className="hidden rounded-full bg-pine px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-pine/90 sm:inline-flex sm:w-auto"
         >
-          Join early access
+          Get Started
         </a>
       </div>
     </header>
@@ -26,7 +26,13 @@ export function SiteHeader() {
 
 function LogoMark() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
       <path d="M4 19V9.5L12 4l8 5.5V19" />
       <path d="M9 19v-5h6v5" />
       <path d="M8 11h.01" />

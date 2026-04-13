@@ -1,8 +1,12 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SHEETS_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL as string | undefined;
-const SHEETS_SECRET = import.meta.env.VITE_GOOGLE_SHEETS_SECRET as string | undefined;
+const SHEETS_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL as
+  | string
+  | undefined;
+const SHEETS_SECRET = import.meta.env.VITE_GOOGLE_SHEETS_SECRET as
+  | string
+  | undefined;
 const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/3cI6oI0nKcV18Apew763K00";
 
 export function LeadForm() {
@@ -12,7 +16,10 @@ export function LeadForm() {
   const [submitError, setSubmitError] = useState("");
 
   const trimmedEmail = email.trim();
-  const isValidEmail = useMemo(() => EMAIL_PATTERN.test(trimmedEmail), [trimmedEmail]);
+  const isValidEmail = useMemo(
+    () => EMAIL_PATTERN.test(trimmedEmail),
+    [trimmedEmail],
+  );
 
   const handleEmailChange = (event: ChangeEvent<HTMLInputElement>) => {
     setEmail(event.target.value);
@@ -58,7 +65,9 @@ export function LeadForm() {
       setIsSubmitting(true);
 
       const body = new URLSearchParams();
-      Object.entries(payload).forEach(([key, value]) => body.set(key, String(value)));
+      Object.entries(payload).forEach(([key, value]) =>
+        body.set(key, String(value)),
+      );
       if (SHEETS_SECRET) body.set("secret", SHEETS_SECRET);
 
       const controller = new AbortController();
@@ -159,7 +168,7 @@ export function LeadForm() {
         disabled={!isValidEmail || isSubmitting}
         className="rounded-full bg-pine px-6 py-3 text-base font-medium text-white transition hover:bg-pine/90 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:hover:bg-slate-200"
       >
-        {isSubmitting ? "Submitting..." : "Join early access"}
+        {isSubmitting ? "Submitting..." : "Get Started"}
       </button>
       {submitError ? (
         <p className="text-sm text-rose-700">{submitError}</p>

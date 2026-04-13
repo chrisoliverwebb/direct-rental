@@ -6,17 +6,18 @@ export function SiteFooter() {
       <div className="container-shell py-10">
         <div className="grid gap-8 md:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-pine/70">Direct Rental</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-pine/70">
+              Direct Rental
+            </p>
             <p className="mt-3 max-w-md text-base leading-7 text-ink/70">
-              Direct-booking websites for holiday rental owners who want to keep more of every
-              stay.
+              Direct-booking websites for holiday rental owners who want to keep
+              more of every stay.
             </p>
           </div>
           <div>
             <p className="text-sm font-semibold text-ink">Contact</p>
             <div className="mt-3 grid gap-2 text-sm text-ink/65">
               <p>hello@directrental.uk</p>
-              <p>Early access enquiries open</p>
             </div>
           </div>
         </div>

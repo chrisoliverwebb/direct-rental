@@ -6,7 +6,6 @@ import { SiteHeader } from "../components/SiteHeader";
 import { usePageMeta } from "../lib/usePageMeta";
 
 const GBP = "\u00a3";
-const APPROX = "\u2248";
 const syncCalendarDays = [
   null,
   null,
@@ -47,8 +46,8 @@ const syncCalendarDays = [
 
 export function HomePage() {
   usePageMeta(
-    "Direct Rental | Direct-booking websites for holiday rental hosts",
-    "Launch a premium direct-booking website for your holiday rental and reduce reliance on booking platforms.",
+    "Direct Rental | Direct booking websites for holiday rental hosts",
+    "Launch a direct booking website for your holiday rental and reduce reliance on booking platforms.",
   );
 
   return (
@@ -59,18 +58,19 @@ export function HomePage() {
         <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="max-w-2xl">
             <h1 className="max-w-xl text-4xl leading-tight text-ink sm:text-6xl">
-              Stop losing fees to booking platforms. Get more direct bookings.
+              Stop losing fees to booking platforms. Take bookings directly.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-ink/70">
-              We build your booking website, sync your calendar, and help you turn more guests into
-              direct bookings.
+              We build direct booking websites for holiday rental owners who
+              want to move away from manual bookings and reduce reliance on
+              booking platforms.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#lead-form"
                 className="rounded-full bg-pine px-6 py-4 text-center text-base font-medium text-white transition hover:bg-pine/90"
               >
-                Join early access
+                Get your site
               </a>
               <Link
                 to="/demo"
@@ -80,7 +80,7 @@ export function HomePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-ink/55">
-              From {GBP}19/month per property
+              {GBP}19/month per property
             </p>
           </div>
           <BrowserPreview />
@@ -89,8 +89,12 @@ export function HomePage() {
 
       <section className="container-shell section-spacing">
         <div>
-          <p className="text-sm uppercase tracking-[0.28em] text-pine/80">How it works</p>
-          <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Simple to get started</h2>
+          <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
+            How it works
+          </p>
+          <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+            Simple to get started
+          </h2>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
@@ -104,7 +108,9 @@ export function HomePage() {
               },
               {
                 title: "You stay in control",
-                points: ["Keep more of each booking and build direct guest relationships"],
+                points: [
+                  "Keep more of each booking and build direct guest relationships",
+                ],
               },
             ].map((step, index) => (
               <div key={step.title} className="card-surface p-6">
@@ -114,7 +120,10 @@ export function HomePage() {
                 <p className="mt-5 text-xl text-ink">{step.title}</p>
                 <div className="mt-5 grid gap-3">
                   {step.points.map((point) => (
-                    <div key={point} className="flex items-start gap-3 text-sm text-ink/75">
+                    <div
+                      key={point}
+                      className="flex items-start gap-3 text-sm text-ink/75"
+                    >
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pine/10 text-pine">
                         <CheckIcon />
                       </span>
@@ -132,10 +141,15 @@ export function HomePage() {
         <div className="card-surface overflow-hidden">
           <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[0.8fr_1.2fr]">
             <div className="max-w-lg">
-              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Demo</p>
-              <h2 className="mt-4 text-4xl text-ink">This is what your property could look like</h2>
+              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
+                Demo
+              </p>
+              <h2 className="mt-4 text-4xl text-ink">
+                This is what your property could look like
+              </h2>
               <p className="mt-4 text-lg leading-8 text-ink/70">
-                A modern, mobile-friendly website designed to help guests book direct with you.
+                A modern, mobile-friendly website designed to help guests book
+                direct with you.
               </p>
               <Link
                 to="/demo"
@@ -149,74 +163,13 @@ export function HomePage() {
         </div>
       </section>
 
-      <section id="pricing" className="container-shell section-spacing">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="max-w-xl">
-            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Comparison</p>
-            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Keep more of every booking</h2>
-            <p className="mt-5 text-lg leading-8 text-ink/70">
-              Booking sites often charge the equivalent of 10% to 25% in effective fees once host
-              fees and guest service fees are factored in.
-            </p>
-            <p className="mt-4 text-lg leading-8 text-ink/70">
-              With Direct Rental, pricing starts from {GBP}19/month per property, plus payment
-              processing when accepting online payments. The amount you save in fees from a single
-              booking could easily cover your monthly costs.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex h-full flex-col rounded-[28px] bg-[#ff5a5f] p-5 text-white shadow-soft sm:p-6">
-              <p className="text-sm uppercase tracking-[0.24em] text-white/60">Booking site</p>
-              <div className="mt-4 space-y-2">
-                <h3 className="text-2xl sm:text-3xl">
-                  Guest pays {GBP}1,000
-                </h3>
-                <p className="text-base text-white/80">Minus host fee: 3%</p>
-                <p className="text-base text-white/80">
-                  Minus guest fee impact: {APPROX} 15%
-                </p>
-              </div>
-              <div className="mt-6 rounded-[22px] bg-white/10 p-4 sm:mt-8 sm:p-5">
-                <p className="text-2xl font-semibold sm:text-3xl">
-                  You receive {APPROX} {GBP}820
-                </p>
-              </div>
-              <div className="mt-6 rounded-[22px] bg-white/10 p-4 text-sm text-white/75 sm:mt-auto">
-                Less profit, less control, and a weaker direct relationship with the guest.
-              </div>
-            </div>
-
-            <div className="flex h-full flex-col rounded-[28px] bg-pine p-5 text-white shadow-soft sm:p-6">
-              <p className="text-sm uppercase tracking-[0.24em] text-white/60">Direct Rental</p>
-              <div className="mt-4 space-y-2">
-                <h3 className="text-2xl sm:text-3xl">
-                  Guest pays {GBP}1,000
-                </h3>
-                <p className="text-base text-white/80">No platform commission</p>
-                <p className="text-base text-white/80">From {GBP}19/month per property</p>
-              </div>
-              <div className="mt-6 rounded-[22px] bg-white/10 p-4 sm:mt-8 sm:p-5">
-                <p className="text-2xl font-semibold sm:text-3xl">
-                  You receive {GBP}1,000*
-                </p>
-              </div>
-              <p className="mt-4 text-sm italic text-white/75">
-                * Example shown for direct payment. For online payments, a small payment processing
-                fee (typically 1% to 3%) will be deducted.
-              </p>
-              <div className="mt-6 rounded-[22px] bg-white/10 p-4 text-sm text-white/75 sm:mt-auto">
-                Better margins, stronger brand, and a direct relationship with the guest.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="container-shell section-spacing pt-0">
         <div className="card-surface overflow-hidden">
           <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
             <div className="max-w-2xl">
-              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Calendar sync</p>
+              <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
+                Calendar sync
+              </p>
               <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
                 Keep your availability in sync across booking sites
               </h2>
@@ -245,46 +198,56 @@ export function HomePage() {
                   textColor="text-white"
                   logoSrc="/platforms/vrbo.svg"
                 />
-                <PlatformBadge name="Other sites" accent="bg-[#edf5f1]" textColor="text-pine" />
+                <PlatformBadge
+                  name="Other sites"
+                  accent="bg-[#edf5f1]"
+                  textColor="text-pine"
+                />
               </div>
             </div>
 
             <div className="rounded-[28px] border border-[#e7ddd0] bg-[#fcfaf6] p-4 shadow-soft sm:p-5">
               <div className="rounded-[24px] border border-[#efe7db] bg-white p-4">
-                  <div className="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.18em] text-ink/40">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                <div className="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.18em] text-ink/40">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                    (day) => (
                       <span key={day}>{day}</span>
-                    ))}
-                  </div>
-                  <div className="mt-3 grid grid-cols-7 gap-2">
-                    {syncCalendarDays.map((entry, index) => {
-                      if (!entry) {
-                        return <div key={`empty-${index}`} className="aspect-square rounded-2xl bg-transparent" />;
-                      }
-
+                    ),
+                  )}
+                </div>
+                <div className="mt-3 grid grid-cols-7 gap-2">
+                  {syncCalendarDays.map((entry, index) => {
+                    if (!entry) {
                       return (
                         <div
-                          key={entry.day}
-                          className={[
-                            "flex aspect-square items-center justify-center rounded-2xl text-sm",
-                            entry.bookingSource === "airbnb"
-                              ? "bg-[#ff5a5f] text-white"
-                              : entry.bookingSource === "booking"
-                                ? "bg-[#003b95] text-white"
-                                : entry.bookingSource === "vrbo"
-                                  ? "bg-[#0E214B] text-white"
-                                  : entry.bookingSource === "direct"
-                                    ? "bg-[#b8d7c8] text-[#1f4b39]"
-                                    : "border border-[#eee5d8] bg-white text-ink/70",
-                          ].join(" ")}
-                        >
-                          {entry.day}
-                        </div>
+                          key={`empty-${index}`}
+                          className="aspect-square rounded-2xl bg-transparent"
+                        />
                       );
-                    })}
-                  </div>
-                </div>
+                    }
 
+                    return (
+                      <div
+                        key={entry.day}
+                        className={[
+                          "flex aspect-square items-center justify-center rounded-2xl text-sm",
+                          entry.bookingSource === "airbnb"
+                            ? "bg-[#ff5a5f] text-white"
+                            : entry.bookingSource === "booking"
+                              ? "bg-[#003b95] text-white"
+                              : entry.bookingSource === "vrbo"
+                                ? "bg-[#0E214B] text-white"
+                                : entry.bookingSource === "direct"
+                                  ? "bg-[#b8d7c8] text-[#1f4b39]"
+                                  : "border border-[#eee5d8] bg-white text-ink/70",
+                        ].join(" ")}
+                      >
+                        {entry.day}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -293,7 +256,9 @@ export function HomePage() {
       <section className="container-shell section-spacing">
         <div>
           <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Traffic</p>
+            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
+              Traffic
+            </p>
             <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
               We don&apos;t just build your site, we help you get bookings
             </h2>
@@ -329,8 +294,12 @@ export function HomePage() {
                   {item.icon}
                 </span>
                 <div>
-                  <p className="text-base font-semibold text-ink">{item.title}</p>
-                  <p className="mt-1 text-sm leading-6 text-ink/65">{item.copy}</p>
+                  <p className="text-base font-semibold text-ink">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-ink/65">
+                    {item.copy}
+                  </p>
                 </div>
               </div>
             ))}
@@ -341,10 +310,15 @@ export function HomePage() {
       <section id="lead-form" className="container-shell section-spacing">
         <div className="card-surface p-6 sm:p-8">
           <div className="mx-auto mb-8 max-w-2xl text-center">
-            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">Early access</p>
-            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">Get your own direct booking website</h2>
+            <p className="text-sm uppercase tracking-[0.28em] text-pine/80">
+              Get Started
+            </p>
+            <h2 className="mt-4 text-4xl text-ink sm:text-5xl">
+              Get your own direct booking website
+            </h2>
             <p className="mt-4 text-lg leading-8 text-ink/70">
-              Join early access to be one of the first to launch your own direct booking site.
+              Tell us a bit about your property and current setup, and we’ll see
+              if Direct Rental is a good fit.
             </p>
           </div>
           <div className="mx-auto w-full max-w-3xl">
@@ -360,7 +334,13 @@ export function HomePage() {
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-current" fill="none" strokeWidth="2" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 stroke-current"
+      fill="none"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M5 12.5l4.2 4.2L19 7.5" />
     </svg>
   );
@@ -368,7 +348,13 @@ function CheckIcon() {
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
       <circle cx="11" cy="11" r="6.5" />
       <path d="M16 16l4.5 4.5" />
     </svg>
@@ -377,7 +363,13 @@ function SearchIcon() {
 
 function MegaphoneIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
       <path d="M4 12h3l8-4v8l-8-4H4z" />
       <path d="M10 15.5v3.2a1.3 1.3 0 01-2.4.7L6 17" />
       <path d="M18 9.5a3.5 3.5 0 010 5" />
@@ -387,7 +379,13 @@ function MegaphoneIcon() {
 
 function GuideIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
       <path d="M6.5 5.5h11a1.5 1.5 0 011.5 1.5v10.5l-3-2-3 2-3-2-3 2V7a1.5 1.5 0 011.5-1.5z" />
       <path d="M9 9.5h6" />
       <path d="M9 12.5h4.5" />
@@ -397,7 +395,13 @@ function GuideIcon() {
 
 function SparkArrowIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-current" fill="none" strokeWidth="1.8" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
       <path d="M6 16l10-10" />
       <path d="M9 6h7v7" />
       <path d="M5.5 9.5l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" />
@@ -412,7 +416,12 @@ type PlatformBadgeProps = {
   logoSrc?: string;
 };
 
-function PlatformBadge({ name, accent, textColor, logoSrc }: PlatformBadgeProps) {
+function PlatformBadge({
+  name,
+  accent,
+  textColor,
+  logoSrc,
+}: PlatformBadgeProps) {
   return (
     <div className="flex items-center gap-3 rounded-[20px] border border-[#efe7db] bg-white px-4 py-3">
       {logoSrc ? (
@@ -422,7 +431,11 @@ function PlatformBadge({ name, accent, textColor, logoSrc }: PlatformBadgeProps)
             accent,
           ].join(" ")}
         >
-          <img src={logoSrc} alt={`${name} logo`} className="h-7 w-auto max-w-[92px]" />
+          <img
+            src={logoSrc}
+            alt={`${name} logo`}
+            className="h-7 w-auto max-w-[92px]"
+          />
         </span>
       ) : (
         <span
