@@ -7,6 +7,9 @@ const DemoPage = lazy(() =>
 const HomePage = lazy(() =>
   import("./pages/HomePage").then((module) => ({ default: module.HomePage })),
 );
+const MarketingPage = lazy(() =>
+  import("./pages/MarketingPage").then((module) => ({ default: module.MarketingPage })),
+);
 const TermsPage = lazy(() =>
   import("./pages/TermsPage").then((module) => ({ default: module.TermsPage })),
 );
@@ -25,6 +28,7 @@ export default function App() {
     <Suspense fallback={<div className="min-h-screen bg-[#f7f2ea]" />}>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />

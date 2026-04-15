@@ -1,6 +1,14 @@
 import { Link } from "react-router-dom";
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  ctaHref?: string;
+  ctaLabel?: string;
+};
+
+export function SiteHeader({
+  ctaHref = "/#lead-form",
+  ctaLabel = "Get Started",
+}: SiteHeaderProps) {
   return (
     <header className="container-shell pt-6">
       <div className="card-surface flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -14,10 +22,10 @@ export function SiteHeader() {
           Direct Rental
         </Link>
         <a
-          href="/#lead-form"
+          href={ctaHref}
           className="button-primary hidden text-sm sm:inline-flex sm:w-auto"
         >
-          Get Started
+          {ctaLabel}
         </a>
       </div>
     </header>
