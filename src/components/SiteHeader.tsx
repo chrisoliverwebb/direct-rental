@@ -58,7 +58,7 @@ export function SiteHeader({
         </div>
         <a
           href={ctaHref}
-          className="button-primary hidden text-sm sm:inline-flex sm:w-auto"
+          className="button-primary !hidden text-sm sm:!inline-flex sm:w-auto"
         >
           {ctaLabel}
         </a>

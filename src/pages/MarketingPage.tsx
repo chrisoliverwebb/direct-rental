@@ -47,18 +47,22 @@ const campaignExamples = [
   {
     label: "Returning guest discount",
     icon: "percent" as const,
+    href: "/marketing/examples#returning-guest-discount",
   },
   {
     label: "Availability reminder",
     icon: "calendar" as const,
+    href: "/marketing/examples#availability-reminder",
   },
   {
     label: "Last-minute weekend offer",
     icon: "clock" as const,
+    href: "/marketing/examples#last-minute-weekend-offer",
   },
   {
     label: "Early access for past guests",
     icon: "star" as const,
+    href: "/marketing/examples#early-access-for-past-guests",
   },
 ];
 
@@ -148,9 +152,10 @@ export function MarketingPage() {
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {campaignExamples.map((example) => (
-              <div
+              <a
                 key={example.label}
-                className="rounded-lg border border-slate-200 bg-white px-5 py-6 shadow-soft"
+                href={example.href}
+                className="rounded-lg border border-slate-200 bg-white px-5 py-6 shadow-soft transition hover:border-pine/25 hover:shadow-md"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-pine/10 text-pine">
                   <CampaignExampleIcon icon={example.icon} />
@@ -158,7 +163,7 @@ export function MarketingPage() {
                 <p className="mt-4 text-base font-semibold leading-7 text-ink">
                   {example.label}
                 </p>
-              </div>
+              </a>
             ))}
           </div>
         </div>

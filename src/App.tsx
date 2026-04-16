@@ -10,6 +10,9 @@ const HomePage = lazy(() =>
 const MarketingPage = lazy(() =>
   import("./pages/MarketingPage").then((module) => ({ default: module.MarketingPage })),
 );
+const MarketingExamplesPage = lazy(() =>
+  import("./pages/MarketingExamplesPage").then((module) => ({ default: module.MarketingExamplesPage })),
+);
 const TermsPage = lazy(() =>
   import("./pages/TermsPage").then((module) => ({ default: module.TermsPage })),
 );
@@ -29,6 +32,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/marketing" element={<MarketingPage />} />
+        <Route path="/marketing/examples" element={<MarketingExamplesPage />} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
