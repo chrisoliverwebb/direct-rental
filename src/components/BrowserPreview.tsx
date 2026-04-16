@@ -11,12 +11,12 @@ export function BrowserPreview() {
         <span className="h-3 w-3 rounded-full bg-rose-300" />
         <span className="h-3 w-3 rounded-full bg-amber-300" />
         <span className="h-3 w-3 rounded-full bg-emerald-300" />
-        <div className="ml-3 max-w-[calc(100%-3.75rem)] truncate rounded-full bg-white px-4 py-1 text-xs text-ink/50 shadow-sm">
+        <div className="ml-3 max-w-[calc(100%-3.75rem)] truncate rounded-md bg-white px-4 py-1 text-xs text-ink/50 shadow-sm">
           directrental.uk
         </div>
       </div>
       <div className="grid gap-4 bg-white p-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="relative min-h-[260px] overflow-hidden rounded-[24px] sm:min-h-[320px] lg:col-span-2">
+        <div className="relative min-h-[260px] overflow-hidden rounded-xl sm:min-h-[320px] lg:col-span-2">
           <ResponsiveImage
             image={{
               avif: featureAvif,
@@ -48,7 +48,7 @@ export function BrowserPreview() {
                   ].map((item) => (
                     <span
                       key={item.label}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-sm"
+                      className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-sm"
                     >
                       {item.icon}
                       {item.label}
@@ -56,7 +56,7 @@ export function BrowserPreview() {
                   ))}
                 </div>
               </div>
-                <span className="rounded-full bg-white px-5 py-3 text-sm font-medium text-ink">
+                <span className="rounded-md bg-white px-5 py-3 text-sm font-medium text-ink">
                   Book now
                 </span>
               

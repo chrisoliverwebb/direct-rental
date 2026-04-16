@@ -1,4 +1,4 @@
-import { LeadForm } from "../components/LeadForm";
+﻿import { LeadForm } from "../components/LeadForm";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -44,10 +44,22 @@ const marketingChannels = [
 ];
 
 const campaignExamples = [
-  "Returning guest discount",
-  "Availability reminder",
-  "Last-minute weekend offer",
-  "Early access for past guests",
+  {
+    label: "Returning guest discount",
+    icon: "percent" as const,
+  },
+  {
+    label: "Availability reminder",
+    icon: "calendar" as const,
+  },
+  {
+    label: "Last-minute weekend offer",
+    icon: "clock" as const,
+  },
+  {
+    label: "Early access for past guests",
+    icon: "star" as const,
+  },
 ];
 
 export function MarketingPage() {
@@ -60,52 +72,50 @@ export function MarketingPage() {
     <main>
       <SiteHeader
         ctaHref={MARKETING_STRIPE_CHECKOUT_URL}
-        ctaLabel="Start for £15/month"
+        ctaLabel="Get Started"
       />
 
       <section className="container-shell section-spacing">
-        <div className="card-surface overflow-hidden">
-          <div className="grid gap-10 px-6 py-10 sm:px-8 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className="max-w-2xl">
-              <h1 className="mt-3 text-4xl leading-tight text-ink sm:text-5xl">
-                Get more direct bookings and keep guests coming back
-              </h1>
-              <p className="mt-5 max-w-xl text-lg leading-8 text-ink/70">
-                A simple marketing system for holiday rental owners to manage
-                past guests, send offers, and bring guests back again.
-              </p>
-              <p className="mt-5 text-sm font-semibold text-ink/60 sm:text-base">
-                £15/month · Cancel anytime · Works with your current setup
-              </p>
-              <div className="mt-8">
-                <a href={MARKETING_STRIPE_CHECKOUT_URL} className="button-primary">
-                  Start for £15/month
-                </a>
-              </div>
+        <div className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="max-w-2xl">
+            <h1 className="max-w-3xl text-4xl leading-tight text-ink sm:text-5xl">
+              Get more direct bookings and keep guests coming back
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-8 text-ink/70">
+              A simple marketing system for holiday rental owners to manage
+              past guests, send offers, and bring guests back again.
+            </p>
+            <div className="mt-7">
+              <a href={MARKETING_STRIPE_CHECKOUT_URL} className="button-primary">
+                Get Started
+              </a>
             </div>
+            <p className="mt-4 text-sm text-ink/55">
+              £15/month · Cancel anytime · Works with your current setup
+            </p>
+          </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,_rgba(31,77,63,0.18),_transparent_58%)]" />
-              <div className="relative rounded-[28px] border border-pine/10 bg-white/90 p-5 shadow-soft sm:p-6">
-                <div className="rounded-[22px] bg-[#f7fbf9] p-5">
-                  <div className="grid gap-3">
-                    {[
-                      "Past guests collected in one place",
-                      "Email and SMS campaigns sent in minutes",
-                      "Keep contact with customers between stays",
-                      "More direct repeat bookings over time",
-                    ].map((item, index) => (
-                      <div
-                        key={item}
-                        className="flex items-center gap-3 rounded-2xl border border-pine/10 bg-white px-4 py-3"
-                      >
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pine text-sm font-semibold text-white">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm text-ink/75">{item}</span>
-                      </div>
-                    ))}
-                  </div>
+          <div className="relative">
+            <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_top,_rgba(29,78,216,0.16),_transparent_58%)]" />
+            <div className="relative rounded-xl border border-pine/10 bg-white/90 p-5 shadow-soft sm:p-6">
+              <div className="rounded-lg bg-slate-50 p-5">
+                <div className="grid gap-3">
+                  {[
+                    "Past guests collected in one place",
+                    "Email and SMS campaigns sent in minutes",
+                    "Keep contact with customers between stays",
+                    "More direct repeat bookings over time",
+                  ].map((item, index) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-3 rounded-lg border border-pine/10 bg-white px-4 py-3"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-pine text-sm font-semibold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm text-ink/75">{item}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -113,20 +123,23 @@ export function MarketingPage() {
         </div>
       </section>
 
-      <section className="container-shell section-spacing pt-0">
-        <div className="grid gap-6">
-          {marketingChannels.map((channel, index) => (
-            <MarketingChannelSection
-              key={channel.eyebrow}
-              {...channel}
-              reverse={index % 2 === 1}
-            />
-          ))}
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
+          <div className="grid gap-0">
+            {marketingChannels.map((channel, index) => (
+              <MarketingChannelSection
+                key={channel.eyebrow}
+                {...channel}
+                reverse={index % 2 === 1}
+                isLast={index === marketingChannels.length - 1}
+              />
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="container-shell section-spacing pt-0">
-        <div className="card-surface p-6 sm:p-7">
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
           <div className="max-w-2xl">
             <p className="eyebrow-label">Examples</p>
             <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
@@ -136,18 +149,23 @@ export function MarketingPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {campaignExamples.map((example) => (
               <div
-                key={example}
-                className="rounded-[24px] border border-pine/10 bg-[#f7fbf9] px-5 py-6 text-base font-semibold leading-7 text-ink shadow-soft"
+                key={example.label}
+                className="rounded-lg border border-slate-200 bg-white px-5 py-6 shadow-soft"
               >
-                {example}
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-pine/10 text-pine">
+                  <CampaignExampleIcon icon={example.icon} />
+                </span>
+                <p className="mt-4 text-base font-semibold leading-7 text-ink">
+                  {example.label}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="start-now" className="container-shell section-spacing pt-0">
-        <div className="card-surface p-6 sm:p-7">
+      <section id="start-now" className="section-frame">
+        <div className="container-shell section-spacing">
           <div className="mx-auto max-w-2xl text-center">
             <p className="eyebrow-label">Start Now</p>
             <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
@@ -186,12 +204,79 @@ function CheckIcon() {
   );
 }
 
+function CampaignExampleIcon({
+  icon,
+}: {
+  icon: "percent" | "calendar" | "clock" | "star";
+}) {
+  if (icon === "percent") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 stroke-current"
+        fill="none"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
+        <path d="M6 18 18 6" />
+        <circle cx="7.5" cy="7.5" r="2.5" />
+        <circle cx="16.5" cy="16.5" r="2.5" />
+      </svg>
+    );
+  }
+
+  if (icon === "calendar") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 stroke-current"
+        fill="none"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
+        <path d="M7 3v3" />
+        <path d="M17 3v3" />
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M4 10h16" />
+      </svg>
+    );
+  }
+
+  if (icon === "clock") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 stroke-current"
+        fill="none"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 stroke-current"
+      fill="none"
+      strokeWidth="1.8"
+      aria-hidden="true"
+    >
+      <path d="m12 4 2.3 4.7 5.2.8-3.8 3.7.9 5.2-4.6-2.4-4.6 2.4.9-5.2-3.8-3.7 5.2-.8Z" />
+    </svg>
+  );
+}
+
 type MarketingChannelSectionProps = {
   eyebrow: string;
   title: string;
   copy: string;
   points: string[];
   visual: "email" | "sms" | "setup";
+  isLast?: boolean;
   reverse?: boolean;
 };
 
@@ -199,6 +284,7 @@ function MarketingChannelSection({
   eyebrow,
   title,
   copy,
+  isLast = false,
   points,
   visual,
   reverse = false,
@@ -206,7 +292,7 @@ function MarketingChannelSection({
   const hasVisual = true;
 
   return (
-    <div className="card-surface overflow-hidden">
+    <div className={isLast ? "" : "border-b border-slate-200"}>
       <div
         className={[
           "grid gap-8 px-6 py-7 sm:px-7 sm:py-8 lg:items-stretch",
@@ -231,7 +317,7 @@ function MarketingChannelSection({
             {points.map((point) => (
               <div
                 key={point}
-                className="flex items-start gap-3 rounded-2xl border border-pine/10 bg-[#f7fbf9] px-4 py-4 text-sm leading-6 text-ink/75"
+                className="flex items-start gap-3 rounded-lg border border-pine/10 bg-slate-50 px-4 py-4 text-sm leading-6 text-ink/75"
               >
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
                   <CheckIcon />
@@ -254,14 +340,14 @@ function MarketingChannelSection({
 function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
   if (visual === "email") {
     return (
-      <div className="flex h-full rounded-[26px] border border-pine/10 bg-[radial-gradient(circle_at_top,_rgba(217,230,224,0.7),_transparent_48%),linear-gradient(180deg,_#fbfdfc_0%,_#f2f8f4_100%)] p-8 sm:p-10">
+      <div className="flex h-full rounded-xl border border-slate-200 bg-white p-8 sm:p-10">
         <div className="flex w-full flex-col justify-center gap-6">
           <img
             src="/marketing/email-list.svg"
             alt="Email list newsletter illustration"
             className="mx-auto block w-full max-w-[230px]"
           />
-          <div className="mx-auto w-full max-w-[320px] rounded-[22px] border border-pine/10 bg-white/80 p-3 shadow-soft backdrop-blur">
+          <div className="mx-auto w-full max-w-[320px] rounded-lg border border-pine/10 bg-white/80 p-3 shadow-soft backdrop-blur">
             <div className="space-y-2">
               {[
                 {
@@ -282,7 +368,7 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
               ].map((contact) => (
                 <div
                   key={contact.email}
-                  className="flex items-center justify-between rounded-[18px] border border-pine/10 bg-white px-3 py-2.5"
+                  className="flex items-center justify-between rounded-md border border-pine/10 bg-white px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">
@@ -292,7 +378,7 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
                       {contact.email}
                     </p>
                   </div>
-                  <span className="ml-3 shrink-0 rounded-full bg-pine/10 px-2.5 py-1 text-[11px] font-semibold text-pine">
+                  <span className="ml-3 shrink-0 rounded-md bg-pine/10 px-2.5 py-1 text-[11px] font-semibold text-pine">
                     {contact.tag}
                   </span>
                 </div>
@@ -306,10 +392,10 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
 
   if (visual === "sms") {
     return (
-      <div className="flex h-full items-center rounded-[26px] border border-pine/10 bg-[radial-gradient(circle_at_top,_rgba(217,230,224,0.55),_transparent_48%),linear-gradient(180deg,_#fbfdfc_0%,_#f2f8f4_100%)] p-4 sm:p-5">
-        <div className="mx-auto max-w-[340px] rounded-[36px] border border-[#d7e2db] bg-[#eef3ef] p-2.5 shadow-soft">
-          <div className="rounded-[30px] border border-white/80 bg-[#f4f7f5] px-4 pb-4 pt-3">
-            <div className="mx-auto h-1.5 w-16 rounded-full bg-[#d8dfdb]" />
+      <div className="flex h-full items-center rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mx-auto max-w-[340px] rounded-[18px] border border-slate-200 bg-slate-100 p-2.5 shadow-soft">
+          <div className="rounded-[14px] border border-white/80 bg-slate-50 px-4 pb-4 pt-3">
+            <div className="mx-auto h-1.5 w-16 rounded-sm bg-slate-300" />
             <div className="mt-3 flex items-center justify-between text-[11px] font-medium text-ink/45">
               <span>9:41</span>
               <div className="flex items-center gap-1.5">
@@ -320,11 +406,11 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
             </div>
             <div className="mt-4 grid gap-3">
               <div className="flex justify-center">
-                <span className="rounded-full bg-[#dfe9e2] px-3 py-1 text-[11px] font-medium text-ink/45">
+                <span className="rounded-md bg-slate-200 px-3 py-1 text-[11px] font-medium text-ink/45">
                   Today
                 </span>
               </div>
-              <div className="mr-8 rounded-[20px] rounded-bl-md bg-white px-4 py-3 text-sm leading-6 text-ink/75 shadow-sm">
+              <div className="mr-8 rounded-md bg-white px-4 py-3 text-sm leading-6 text-ink/75 shadow-sm">
                 Hi Sarah, 17-19 May has just opened up again at Seabrook
                 Cottage. As a past guest, you can book direct before we release
                 the dates elsewhere.
@@ -340,7 +426,7 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
     );
   }
   return (
-    <div className="flex h-full items-center rounded-[26px] border border-pine/10 bg-[radial-gradient(circle_at_top,_rgba(217,230,224,0.55),_transparent_48%),linear-gradient(180deg,_#fbfdfc_0%,_#f2f8f4_100%)] p-6 sm:p-8">
+    <div className="flex h-full items-center rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
       <img
         src="/marketing/existing-website.svg"
         alt="Existing website and marketing integration illustration"
@@ -349,4 +435,5 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
     </div>
   );
 }
+
 
