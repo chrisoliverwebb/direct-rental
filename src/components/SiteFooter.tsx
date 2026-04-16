@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 
-export function SiteFooter() {
+type SiteFooterProps = {
+  description?: string;
+};
+
+export function SiteFooter({
+  description = "Direct-booking websites for holiday rental owners who want to keep more of every stay.",
+}: SiteFooterProps) {
   return (
     <footer className="border-t border-pine/10 bg-mist/45">
       <div className="container-shell py-10">
@@ -10,8 +16,7 @@ export function SiteFooter() {
               Direct Rental
             </p>
             <p className="mt-3 max-w-md text-base leading-7 text-ink/70">
-              Direct-booking websites for holiday rental owners who want to keep
-              more of every stay.
+              {description}
             </p>
           </div>
           <div>

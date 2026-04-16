@@ -7,9 +7,18 @@ const SHEETS_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL as
 const SHEETS_SECRET = import.meta.env.VITE_GOOGLE_SHEETS_SECRET as
   | string
   | undefined;
-const STRIPE_CHECKOUT_URL = "https://buy.stripe.com/3cI6oI0nKcV18Apew763K00";
+const DEFAULT_STRIPE_CHECKOUT_URL =
+  "https://buy.stripe.com/3cI6oI0nKcV18Apew763K00";
 
-export function LeadForm() {
+type LeadFormProps = {
+  checkoutUrl?: string;
+  emailOnly?: boolean;
+};
+
+export function LeadForm({
+  checkoutUrl = DEFAULT_STRIPE_CHECKOUT_URL,
+  emailOnly = false,
+}: LeadFormProps) {
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,7 +96,7 @@ export function LeadForm() {
       form.reset();
       setEmail("");
       setTouched(false);
-      window.location.assign(STRIPE_CHECKOUT_URL);
+      window.location.assign(checkoutUrl);
     } catch (error) {
       console.error("Failed to submit early access lead:", error, payload);
       setSubmitError("We couldn't submit your request. Please try again.");
@@ -96,19 +105,21 @@ export function LeadForm() {
     }
   };
 
-  const showError = touched && trimmedEmail.length > 0 && !isValidEmail;
+  const showError = touched && !isValidEmail;
 
   return (
     <form onSubmit={handleSubmit} noValidate className="grid gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-ink">
-          Name
-          <input
-            name="name"
-            placeholder="Jane Smith"
-            className="input-field"
-          />
-        </label>
+      <div className={emailOnly ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
+        {emailOnly ? null : (
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            Name
+            <input
+              name="name"
+              placeholder="Jane Smith"
+              className="input-field"
+            />
+          </label>
+        )}
         <label className="grid gap-2 text-sm font-medium text-ink">
           <span>
             Email <span className="text-pine">*</span>
@@ -129,30 +140,32 @@ export function LeadForm() {
           />
         </label>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-ink">
-          Number of properties
-          <select
-            name="properties"
-            defaultValue=""
-            className="input-field"
-          >
-            <option value="">Select an option</option>
-            <option>1</option>
-            <option>2-3</option>
-            <option>4-10</option>
-            <option>10+</option>
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium text-ink">
-          Where do you currently list your property?
-          <input
-            name="platforms"
-            placeholder="e.g. booking platforms, direct, other"
-            className="input-field"
-          />
-        </label>
-      </div>
+      {emailOnly ? null : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            Number of properties
+            <select
+              name="properties"
+              defaultValue=""
+              className="input-field"
+            >
+              <option value="">Select an option</option>
+              <option>1</option>
+              <option>2-3</option>
+              <option>4-10</option>
+              <option>10+</option>
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-ink">
+            Where do you currently list your property?
+            <input
+              name="platforms"
+              placeholder="e.g. booking platforms, direct, other"
+              className="input-field"
+            />
+          </label>
+        </div>
+      )}
       <div className="grid gap-2">
         <p id="lead-email-help" className="text-sm text-ink/55">
           <span className="text-pine">*</span> Required
@@ -165,7 +178,7 @@ export function LeadForm() {
       </div>
       <button
         type="submit"
-        disabled={!isValidEmail || isSubmitting}
+        disabled={isSubmitting}
         className="button-primary disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:hover:bg-slate-200"
       >
         {isSubmitting ? "Submitting..." : "Get Started"}
