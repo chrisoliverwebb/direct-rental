@@ -89,57 +89,65 @@ export function HomePage() {
 
       <section className="section-frame">
         <div className="container-shell section-spacing">
-        <div>
-          <p className="eyebrow-label">How it works</p>
-          <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
-            Simple to get started
-          </h2>
+          <div>
+            <p className="eyebrow-label">How it works</p>
+            <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
+              Simple to get started
+            </h2>
 
-          <div className="mt-7 grid gap-4 lg:grid-cols-3">
-            {[
-              {
-                title: "We build your website",
-                points: ["Your own branded booking site"],
-              },
-              {
-                title: "Guests book direct with you",
-                points: ["Accept direct reservations and sync availability"],
-              },
-              {
-                title: "You stay in control",
-                points: [
-                  "Keep more of each booking and build direct guest relationships",
-                ],
-              },
-            ].map((step, index) => (
-              <div key={step.title} className="card-surface p-5 sm:p-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-pine/10 text-base font-semibold text-pine">
-                  {index + 1}
-                </div>
-                <p className="mt-4 text-lg text-ink">{step.title}</p>
-                <div className="mt-4 grid gap-3">
-                  {step.points.map((point) => (
-                    <div
-                      key={point}
-                      className="flex items-start gap-3 text-sm text-ink/75"
-                    >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
-                        <CheckIcon />
-                      </span>
-                      <span>{point}</span>
+            <div className="mt-7 grid gap-4 lg:grid-cols-3 lg:gap-0 lg:border-y lg:border-slate-200">
+              {[
+                {
+                  title: "We build your website",
+                  points: ["Your own branded booking site"],
+                },
+                {
+                  title: "Guests book direct with you",
+                  points: ["Accept direct reservations and sync availability"],
+                },
+                {
+                  title: "You stay in control",
+                  points: [
+                    "Keep more of each booking and build direct guest relationships",
+                  ],
+                },
+              ].map((step, index) => (
+                <div
+                  key={step.title}
+                  className={[
+                    "py-5 lg:px-6 lg:py-6",
+                    index < 2 ? "lg:border-r lg:border-slate-200" : "",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-pine/10 text-base font-semibold text-pine">
+                      {index + 1}
                     </div>
-                  ))}
+                    <p className="text-lg text-ink">{step.title}</p>
+                  </div>
+                  <div className="mt-4 grid gap-3">
+                    {step.points.map((point) => (
+                      <div
+                        key={point}
+                        className="flex items-start gap-3 text-sm text-ink/75"
+                      >
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
+                          <CheckIcon />
+                        </span>
+                        <span>{point}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         </div>
       </section>
 
-      <section className="container-shell section-spacing">
-        <div className="card-surface overflow-hidden">
-          <div className="grid gap-8 px-6 py-7 sm:px-7 sm:py-8 lg:grid-cols-[0.78fr_1.22fr]">
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
+          <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr]">
             <div className="max-w-lg">
               <p className="eyebrow-label">Demo</p>
               <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
@@ -161,9 +169,9 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="container-shell section-spacing pt-0">
-        <div className="card-surface overflow-hidden">
-          <div className="grid gap-8 px-6 py-7 sm:px-7 sm:py-8 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
+          <div className="grid gap-8 lg:grid-cols-[1fr_0.95fr] lg:items-center">
             <div className="max-w-2xl">
               <p className="eyebrow-label">Calendar sync</p>
               <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
@@ -180,19 +188,19 @@ export function HomePage() {
                   name="Airbnb"
                   accent="bg-[#ff5a5f]"
                   textColor="text-white"
-                  logoSrc="/platforms/airbnb.svg"
+                  logoSrc="/assets/platforms/airbnb.svg"
                 />
                 <PlatformBadge
                   name="Booking.com"
                   accent="bg-[#003580]"
                   textColor="text-white"
-                  logoSrc="/platforms/booking.png"
+                  logoSrc="/assets/platforms/booking.png"
                 />
                 <PlatformBadge
                   name="Vrbo"
                   accent="bg-[#0E214B]"
                   textColor="text-white"
-                  logoSrc="/platforms/vrbo.svg"
+                  logoSrc="/assets/platforms/vrbo.svg"
                 />
                 <PlatformBadge
                   name="Other sites"
@@ -202,8 +210,8 @@ export function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-[14px] border border-pine/10 bg-white p-4">
-              <div className="rounded-[10px] border border-slate-200/80 bg-white p-4">
+            <div className="rounded-lg border border-pine/10 bg-white p-4">
+              <div className="rounded-md border border-slate-200/80 bg-white p-4">
                 <div className="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.18em] text-ink/40">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
                     (day) => (
@@ -226,7 +234,7 @@ export function HomePage() {
                       <div
                         key={entry.day}
                         className={[
-                          "flex aspect-square items-center justify-center rounded-lg text-sm font-medium",
+                          "flex aspect-square items-center justify-center rounded-md text-sm font-medium",
                           entry.bookingSource === "airbnb"
                             ? "bg-[#ff5a5f] text-white"
                             : entry.bookingSource === "booking"
@@ -234,7 +242,7 @@ export function HomePage() {
                               : entry.bookingSource === "vrbo"
                                 ? "bg-[#0E214B] text-white"
                                 : entry.bookingSource === "direct"
-                                  ? "bg-[#b8d7c8] text-[#1f4b39]"
+                                  ? "bg-blue-100 text-blue-700"
                                   : "border border-slate-200/80 bg-white text-ink/70",
                         ].join(" ")}
                       >
@@ -249,15 +257,15 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="container-shell section-spacing">
-        <div>
+      <section className="section-frame">
+        <div className="container-shell section-spacing">
           <div className="max-w-3xl">
             <p className="eyebrow-label">Traffic</p>
             <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
               We don&apos;t just build your site, we help you get bookings
             </h2>
           </div>
-          <div className="mt-7 grid gap-3 lg:grid-cols-2">
+          <div className="mt-7 grid gap-4 lg:grid-cols-2 lg:gap-0 lg:border-y lg:border-slate-200">
             {[
               {
                 title: "Search-friendly from day one",
@@ -282,7 +290,13 @@ export function HomePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="card-surface flex items-start gap-4 p-5"
+                className={[
+                  "flex items-start gap-4 py-5 lg:px-6 lg:py-6",
+                  item.title === "Search-friendly from day one" ||
+                  item.title === "Clear guidance"
+                    ? "lg:border-r lg:border-slate-200"
+                    : "",
+                ].join(" ")}
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-pine/10 text-pine">
                   {item.icon}
@@ -301,8 +315,8 @@ export function HomePage() {
         </div>
       </section>
 
-      <section id="lead-form" className="container-shell section-spacing">
-        <div className="card-surface p-6 sm:p-7">
+      <section id="lead-form" className="section-frame">
+        <div className="container-shell section-spacing">
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <p className="eyebrow-label">Get started</p>
             <h2 className="mt-3 text-3xl text-ink sm:text-4xl">
@@ -415,7 +429,7 @@ function PlatformBadge({
   logoSrc,
 }: PlatformBadgeProps) {
   return (
-    <div className="flex items-center gap-3 rounded-[20px] border border-[#efe7db] bg-white px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
       {logoSrc ? (
         <span
           className={[
