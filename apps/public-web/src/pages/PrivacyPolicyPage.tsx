@@ -186,7 +186,7 @@ export function PrivacyPolicyPage() {
       eyebrow="Privacy policy"
       title="Privacy Policy"
       lastUpdated={lastUpdated}
-      intro={<p>This Privacy Policy explains how Direct Rental ("we", "us", "our") collects and uses personal data.</p>}
+      intro={<p>This Privacy Policy explains how Direct Rental (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) collects and uses personal data.</p>}
       sections={sections}
     />
   );

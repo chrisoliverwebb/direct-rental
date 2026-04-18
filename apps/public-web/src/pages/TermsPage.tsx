@@ -124,7 +124,7 @@ const sections = [
     title: "10. Service Disclaimer",
     content: (
       <>
-        <p>The Direct Rental platform is provided on an "as is" and "as available" basis.</p>
+        <p>The Direct Rental platform is provided on an &quot;as is&quot; and &quot;as available&quot; basis.</p>
         <p>While we aim to provide a reliable and effective service, we do not guarantee:</p>
         <ul className="list-disc space-y-2 pl-6">
           <li>That your property will receive bookings</li>
@@ -203,7 +203,7 @@ export function TermsPage() {
       eyebrow="Terms and conditions"
       title="Terms and Conditions"
       lastUpdated={lastUpdated}
-      intro={<p>These Terms and Conditions ("Terms") govern your use of Direct Rental ("we", "us", "our").</p>}
+      intro={<p>These Terms and Conditions (&quot;Terms&quot;) govern your use of Direct Rental (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;).</p>}
       sections={[
         {
           title: "Agreement",

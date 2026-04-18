@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import featureAvif from "../static/feature.avif";
 import featureJpg from "../static/feature.jpg";
 import featureWebp from "../static/feature.webp";

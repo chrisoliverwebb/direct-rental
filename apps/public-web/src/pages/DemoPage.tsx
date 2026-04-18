@@ -69,9 +69,9 @@ export function DemoPage() {
   const locationSectionRef = useRef<HTMLDivElement | null>(null);
   const lastScrollYRef = useRef(0);
   const scrollRafRef = useRef<number | null>(null);
-  const featuredImage = galleryImages[selectedImage] ?? galleryImages[0];
+  const featuredImage = galleryImages[selectedImage] ?? galleryImages[0]!;
   const heroImages = galleryImages.slice(0, 5);
-  const activeMonth = calendarMonths[calendarMonthIndex];
+  const activeMonth = calendarMonths[calendarMonthIndex] ?? calendarMonths[0]!;
   const calendarDays = useMemo(
     () => buildCalendarDays(activeMonth.year, activeMonth.monthIndex),
     [activeMonth],
@@ -171,6 +171,10 @@ export function DemoPage() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        if (!entry) {
+          return;
+        }
+
         if (entry.isIntersecting) {
           setShouldRenderMap(true);
           observer.disconnect();
@@ -1218,7 +1222,7 @@ export function DemoPage() {
                   <StarIcon key={starIndex} />
                 ))}
               </div>
-              <p className="text-lg leading-8 text-stone-700">"{review.quote}"</p>
+              <p className="text-lg leading-8 text-stone-700">&ldquo;{review.quote}&rdquo;</p>
               <div className="mt-6">
                 <p className="text-base font-semibold text-stone-900">{review.name}</p>
                 <p className="text-sm text-stone-500">{review.detail}</p>
@@ -1434,7 +1438,7 @@ function pad(value: number) {
 }
 
 function parseDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
+  const [year = 0, month = 1, day = 1] = value.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
 }
 

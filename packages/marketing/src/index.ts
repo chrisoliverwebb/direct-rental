@@ -1,0 +1,28 @@
+import type { GetContactsQuery } from "@repo/api-contracts";
+
+export const marketingKeys = {
+  all: ["marketing"] as const,
+  dashboard: () => [...marketingKeys.all, "dashboard"] as const,
+  contacts: (query: GetContactsQuery) => [...marketingKeys.all, "contacts", query] as const,
+  contact: (contactId: string) => [...marketingKeys.all, "contact", contactId] as const,
+  campaigns: () => [...marketingKeys.all, "campaigns"] as const,
+  campaign: (campaignId: string) => [...marketingKeys.all, "campaign", campaignId] as const,
+  templates: () => [...marketingKeys.all, "templates"] as const,
+};
+
+export const contactStatusLabel = (status: "SUBSCRIBED" | "UNSUBSCRIBED") =>
+  status === "SUBSCRIBED" ? "Subscribed" : "Unsubscribed";
+
+export const campaignStatusLabel = (status: "DRAFT" | "SCHEDULED" | "SENT") => {
+  if (status === "DRAFT") {
+    return "Draft";
+  }
+
+  if (status === "SCHEDULED") {
+    return "Scheduled";
+  }
+
+  return "Sent";
+};
+
+export const channelLabel = (channel: "EMAIL" | "SMS") => (channel === "EMAIL" ? "Email" : "SMS");

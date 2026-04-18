@@ -1,11 +1,14 @@
 {
-  "name": "direct-rental",
+  "name": "@repo/public-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.3",

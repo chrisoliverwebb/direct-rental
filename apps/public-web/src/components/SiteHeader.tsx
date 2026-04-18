@@ -25,7 +25,7 @@ export function SiteHeader({
           <nav className="flex items-center gap-6 text-sm font-medium text-ink/70">
             <NavLink
               to="/"
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 isActive
                   ? "text-ink"
                   : "transition hover:text-ink"
@@ -36,7 +36,7 @@ export function SiteHeader({
             </NavLink>
             <NavLink
               to="/marketing"
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 isActive
                   ? "text-ink"
                   : "transition hover:text-ink"
@@ -46,7 +46,7 @@ export function SiteHeader({
             </NavLink>
             <NavLink
               to="/demo"
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 isActive
                   ? "text-ink"
                   : "transition hover:text-ink"

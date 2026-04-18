@@ -177,7 +177,7 @@ export function MarketingPage() {
               Start using your guest list to bring guests back
             </h2>
             <p className="mt-4 text-base leading-7 text-ink/70">
-              Tell us a little about your property and we'll help you get set up
+              Tell us a little about your property and we&apos;ll help you get set up
               with a simple repeat-booking marketing system.
             </p>
           </div>
