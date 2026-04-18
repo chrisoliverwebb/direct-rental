@@ -188,19 +188,19 @@ export function HomePage() {
                   name="Airbnb"
                   accent="bg-[#ff5a5f]"
                   textColor="text-white"
-                  logoSrc="/platforms/airbnb.svg"
+                  logoSrc="/assets/platforms/airbnb.svg"
                 />
                 <PlatformBadge
                   name="Booking.com"
                   accent="bg-[#003580]"
                   textColor="text-white"
-                  logoSrc="/platforms/booking.png"
+                  logoSrc="/assets/platforms/booking.png"
                 />
                 <PlatformBadge
                   name="Vrbo"
                   accent="bg-[#0E214B]"
                   textColor="text-white"
-                  logoSrc="/platforms/vrbo.svg"
+                  logoSrc="/assets/platforms/vrbo.svg"
                 />
                 <PlatformBadge
                   name="Other sites"

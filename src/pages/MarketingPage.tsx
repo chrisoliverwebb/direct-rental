@@ -348,7 +348,7 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
       <div className="flex h-full rounded-xl border border-slate-200 bg-white p-8 sm:p-10">
         <div className="flex w-full flex-col justify-center gap-6">
           <img
-            src="/marketing/email-list.svg"
+            src="/assets/marketing/email-list.svg"
             alt="Email list newsletter illustration"
             className="mx-auto block w-full max-w-[230px]"
           />
@@ -433,7 +433,7 @@ function ChannelVisual({ visual }: { visual: "email" | "sms" | "setup" }) {
   return (
     <div className="flex h-full items-center rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
       <img
-        src="/marketing/existing-website.svg"
+        src="/assets/marketing/existing-website.svg"
         alt="Existing website and marketing integration illustration"
         className="mx-auto block w-full max-w-[360px]"
       />
