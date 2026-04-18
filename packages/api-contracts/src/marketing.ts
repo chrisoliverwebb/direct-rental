@@ -5,10 +5,8 @@ export const campaignStatusSchema = z.enum(["DRAFT", "SCHEDULED", "SENT"]);
 export const campaignChannelSchema = z.enum(["EMAIL", "SMS"]);
 export const contactStatusSchema = z.enum(["SUBSCRIBED", "UNSUBSCRIBED"]);
 export const contactSourceSchema = z.enum([
-  "MANUAL_IMPORT",
-  "CSV_IMPORT",
   "MANUAL_ENTRY",
-  "WIFI_CAPTURE",
+  "DIRECT_BOOKING",
 ]);
 
 export const campaignSummarySchema = z.object({
@@ -54,13 +52,14 @@ export const contactSummarySchema = z.object({
   id: z.string(),
   firstName: z.string(),
   lastName: z.string(),
-  email: z.email(),
+  email: z.email().nullable(),
   phone: z.string().nullable(),
   status: contactStatusSchema,
+  emailMarketing: z.boolean(),
+  smsMarketing: z.boolean(),
   source: contactSourceSchema,
-  propertyId: z.string(),
-  propertyName: z.string(),
   createdAt: isoDateStringSchema,
+  lastContactedAt: isoDateStringSchema.nullable(),
   lastBookingAt: isoDateStringSchema.nullable(),
 });
 
@@ -72,7 +71,6 @@ export const getContactsQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
   status: contactStatusSchema.optional(),
   source: contactSourceSchema.optional(),
-  propertyId: z.string().trim().min(1).optional(),
 });
 
 export type GetContactsQuery = z.infer<typeof getContactsQuerySchema>;
@@ -81,10 +79,11 @@ export const contactConsentSchema = z.object({
   emailMarketing: z.boolean(),
   smsMarketing: z.boolean(),
   capturedAt: isoDateStringSchema,
+  emailUnsubscribedAt: isoDateStringSchema.nullable(),
+  smsUnsubscribedAt: isoDateStringSchema.nullable(),
 });
 
 export const contactDetailSchema = contactSummarySchema.extend({
-  notes: z.string().nullable(),
   consents: contactConsentSchema,
 });
 
@@ -93,14 +92,47 @@ export type ContactDetail = z.infer<typeof contactDetailSchema>;
 export const createContactRequestSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
-  email: z.email("Enter a valid email address"),
-  phone: z.string().trim().nullable().optional(),
-  propertyId: z.string().trim().min(1),
-  notes: z.string().trim().nullable().optional(),
+  email: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.email("Enter a valid email address").nullable().optional(),
+  ),
+  phone: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.string().trim().nullable().optional(),
+  ),
   consents: z.object({
     emailMarketing: z.boolean(),
     smsMarketing: z.boolean(),
   }),
+}).superRefine((value, ctx) => {
+  if (!value.email && !value.phone) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["email"],
+      message: "Enter at least an email or phone number",
+    });
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["phone"],
+      message: "Enter at least an email or phone number",
+    });
+  }
+
+  if (value.consents.emailMarketing && !value.email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["consents", "emailMarketing"],
+      message: "Email marketing requires a valid email address",
+    });
+  }
+
+  if (value.consents.smsMarketing && !value.phone) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["consents", "smsMarketing"],
+      message: "SMS marketing requires a phone number",
+    });
+  }
 });
 
 export type CreateContactRequest = z.infer<typeof createContactRequestSchema>;

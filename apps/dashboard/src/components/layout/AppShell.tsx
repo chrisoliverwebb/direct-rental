@@ -23,8 +23,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 lg:grid-cols-[260px_1fr]">
-        <aside className="border-r bg-white px-5 py-6">
+      <aside className="border-b bg-white px-5 py-6 lg:fixed lg:inset-y-0 lg:left-0 lg:w-[260px] lg:border-b-0 lg:border-r">
+        <div className="mx-auto lg:flex lg:h-full lg:flex-col">
           <div className="mb-10">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Direct Rental</p>
             <h1 className="mt-2 text-xl font-semibold text-slate-900">Marketing dashboard</h1>
@@ -49,9 +49,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
-        </aside>
-        <div className="min-w-0">
-          <header className="flex items-center justify-between border-b bg-white px-6 py-4">
+        </div>
+      </aside>
+      <div className="min-w-0 lg:pl-[260px]">
+        <div className="min-h-screen">
+          <header className="flex items-center justify-between border-b bg-white px-6 py-4 lg:sticky lg:top-0 lg:z-20">
             <div>
               <p className="text-sm font-medium text-slate-900">Welcome back</p>
               <p className="text-sm text-muted-foreground">{getUserDisplayName(user)}</p>
@@ -60,7 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               variant="outline"
               onClick={async () => {
                 await logoutMutation.mutateAsync();
-                router.push("/login");
+                router.replace("/login");
+                router.refresh();
               }}
             >
               <LogOut className="mr-2 h-4 w-4" />

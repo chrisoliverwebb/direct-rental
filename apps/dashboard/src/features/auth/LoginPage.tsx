@@ -29,10 +29,10 @@ export function LoginPage() {
   });
 
   useEffect(() => {
-    if (currentUserQuery.data) {
-      router.push("/dashboard");
+    if (currentUserQuery.isSuccess && currentUserQuery.data) {
+      router.replace("/dashboard");
     }
-  }, [currentUserQuery.data, router]);
+  }, [currentUserQuery.data, currentUserQuery.isSuccess, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">

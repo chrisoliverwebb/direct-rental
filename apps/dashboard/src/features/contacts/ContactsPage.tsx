@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Info, Mail, MessageSquare, Plus, Search } from "lucide-react";
 import { contactStatusLabel } from "@repo/marketing";
 import { formatDate } from "@repo/shared";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
@@ -14,39 +16,61 @@ import { LoadingState } from "@/components/feedback/LoadingState";
 import { useContacts } from "@/features/marketing/hooks";
 
 export function ContactsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [source, setSource] = useState("");
+  const [status, setStatus] = useState<"SUBSCRIBED" | "UNSUBSCRIBED" | "">("SUBSCRIBED");
 
   const contactsQuery = useContacts({
     page: 1,
     pageSize: 10,
     search: search || undefined,
     status: status ? (status as "SUBSCRIBED" | "UNSUBSCRIBED") : undefined,
-    source: source ? (source as "MANUAL_IMPORT" | "CSV_IMPORT" | "MANUAL_ENTRY" | "WIFI_CAPTURE") : undefined,
   });
 
   return (
     <div className="grid gap-6">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Guest database with search and basic filtering.</p>
+        <Link
+          href="/contacts/new"
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New contact
+        </Link>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search contacts" />
-        <Select value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="">All statuses</option>
-          <option value="SUBSCRIBED">Subscribed</option>
-          <option value="UNSUBSCRIBED">Unsubscribed</option>
-        </Select>
-        <Select value={source} onChange={(event) => setSource(event.target.value)}>
-          <option value="">All sources</option>
-          <option value="MANUAL_IMPORT">Manual import</option>
-          <option value="CSV_IMPORT">CSV import</option>
-          <option value="MANUAL_ENTRY">Manual entry</option>
-          <option value="WIFI_CAPTURE">WiFi capture</option>
-        </Select>
+      <div className="grid gap-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search contacts"
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={status === "SUBSCRIBED" ? "default" : "outline"}
+            onClick={() => setStatus("SUBSCRIBED")}
+          >
+            Subscribed
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={status === "UNSUBSCRIBED" ? "default" : "outline"}
+            onClick={() => setStatus("UNSUBSCRIBED")}
+          >
+            Unsubscribed
+          </Button>
+          <Button type="button" size="sm" variant={status === "" ? "default" : "outline"} onClick={() => setStatus("")}>
+            All
+          </Button>
+        </div>
       </div>
 
       {contactsQuery.isLoading ? <LoadingState rows={6} /> : null}
@@ -63,26 +87,59 @@ export function ContactsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Property</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Phone number</TableHead>
+                <TableHead>Last contacted</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-1.5">
+                    <span>Marketing</span>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-label="Marketing consent guidance"
+                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                      <div className="pointer-events-none absolute left-0 top-6 z-10 hidden w-72 rounded-md bg-slate-900 px-3 py-2 text-xs font-normal leading-5 text-white shadow-lg group-hover:block">
+                        In line with GDPR, marketing should only be sent to contacts who are subscribed. Transactional
+                        emails can still be sent to unsubscribed contacts when needed.
+                      </div>
+                    </div>
+                  </div>
+                </TableHead>
+                <TableHead>Created at</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contactsQuery.data.items.map((contact) => (
-                <TableRow key={contact.id}>
+                <TableRow
+                  key={contact.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/contacts/${contact.id}`)}
+                >
                   <TableCell>
-                    <Link className="font-medium text-primary" href={`/contacts/${contact.id}`}>
+                    <Link
+                      className="font-medium text-primary"
+                      href={`/contacts/${contact.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       {contact.firstName} {contact.lastName}
                     </Link>
                   </TableCell>
-                  <TableCell>{contact.email}</TableCell>
+                  <TableCell>{contact.email ?? "No email"}</TableCell>
+                  <TableCell>{contact.phone ?? "No phone"}</TableCell>
+                  <TableCell>{formatDate(contact.lastContactedAt)}</TableCell>
                   <TableCell>
-                    <Badge variant={contact.status === "SUBSCRIBED" ? "success" : "secondary"}>
-                      {contactStatusLabel(contact.status)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={contact.status === "SUBSCRIBED" ? "success" : "secondary"}>
+                        {contactStatusLabel(contact.status)}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-slate-500">
+                        {contact.emailMarketing ? <Mail className="h-3.5 w-3.5" aria-label="Email subscribed" /> : null}
+                        {contact.smsMarketing ? <MessageSquare className="h-3.5 w-3.5" aria-label="SMS subscribed" /> : null}
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>{contact.propertyName}</TableCell>
                   <TableCell>{formatDate(contact.createdAt)}</TableCell>
                 </TableRow>
               ))}

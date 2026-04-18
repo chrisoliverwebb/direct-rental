@@ -13,6 +13,9 @@ export const marketingKeys = {
 export const contactStatusLabel = (status: "SUBSCRIBED" | "UNSUBSCRIBED") =>
   status === "SUBSCRIBED" ? "Subscribed" : "Unsubscribed";
 
+export const contactSourceLabel = (source: "MANUAL_ENTRY" | "DIRECT_BOOKING") =>
+  source === "MANUAL_ENTRY" ? "Manual Entry" : "Direct Booking";
+
 export const campaignStatusLabel = (status: "DRAFT" | "SCHEDULED" | "SENT") => {
   if (status === "DRAFT") {
     return "Draft";

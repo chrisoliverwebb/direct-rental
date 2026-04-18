@@ -1,6 +1,8 @@
 "use client";
 
-import { contactStatusLabel } from "@repo/marketing";
+import Link from "next/link";
+import { ChevronLeft, Info, Mail, Phone } from "lucide-react";
+import { contactSourceLabel, contactStatusLabel } from "@repo/marketing";
 import { formatDate, formatDateTime } from "@repo/shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,48 +30,135 @@ export function ContactDetailPage({ contactId }: { contactId: string }) {
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          {contact.firstName} {contact.lastName}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{contact.email}</p>
+        <Link
+          href="/contacts"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition hover:text-slate-900"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to contacts
+        </Link>
+        <div className="mt-2 flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {contact.firstName} {contact.lastName}
+          </h1>
+          <Badge variant={contact.status === "SUBSCRIBED" ? "success" : "secondary"}>
+            {contactStatusLabel(contact.status)}
+          </Badge>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">Contact record</p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Core contact and property details.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <DetailRow label="Phone" value={contact.phone ?? "Not provided"} />
-            <DetailRow label="Property" value={contact.propertyName} />
-            <DetailRow label="Source" value={contact.source} />
-            <DetailRow label="Status" value={<Badge variant={contact.status === "SUBSCRIBED" ? "success" : "secondary"}>{contactStatusLabel(contact.status)}</Badge>} />
-            <DetailRow label="Created" value={formatDate(contact.createdAt)} />
-            <DetailRow label="Last booking" value={formatDate(contact.lastBookingAt)} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Consent</CardTitle>
-            <CardDescription>Current marketing consent flags and capture timing.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <DetailRow label="Email marketing" value={contact.consents.emailMarketing ? "Yes" : "No"} />
-            <DetailRow label="SMS marketing" value={contact.consents.smsMarketing ? "Yes" : "No"} />
-            <DetailRow label="Captured at" value={formatDateTime(contact.consents.capturedAt)} />
-            <DetailRow label="Notes" value={contact.notes ?? "No notes yet"} />
-          </CardContent>
-        </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="grid gap-3">
+            <DetailRow
+              label="Email"
+              value={contact.email ?? "No email"}
+              icon={<Mail className="h-4 w-4" />}
+            />
+            <DetailRow
+              label="Phone number"
+              value={contact.phone ?? "Not provided"}
+              icon={<Phone className="h-4 w-4" />}
+            />
+            <DetailRow
+              label="Status"
+              value={
+                <Badge variant={contact.status === "SUBSCRIBED" ? "success" : "secondary"}>
+                  {contactStatusLabel(contact.status)}
+                </Badge>
+              }
+            />
+            <DetailRow label="Last contacted" value={formatDate(contact.lastContactedAt)} />
+            <DetailRow
+              label="Created at"
+              value={`${formatDate(contact.createdAt)} (${contactSourceLabel(contact.source)})`}
+            />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Consent</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <ConsentCard
+              label="Email marketing"
+              enabled={contact.consents.emailMarketing}
+              capturedAt={contact.consents.capturedAt}
+              unsubscribedAt={contact.consents.emailUnsubscribedAt}
+            />
+            <ConsentCard
+              label="SMS marketing"
+              enabled={contact.consents.smsMarketing}
+              capturedAt={contact.consents.capturedAt}
+              unsubscribedAt={contact.consents.smsUnsubscribedAt}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-1 rounded-lg border p-3">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-2 text-sm text-slate-900">
+        {icon ? <span className="text-slate-400">{icon}</span> : null}
+        <span>{value}</span>
       </div>
     </div>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function ConsentCard({
+  label,
+  enabled,
+  capturedAt,
+  unsubscribedAt,
+}: {
+  label: string;
+  enabled: boolean;
+  capturedAt: string;
+  unsubscribedAt: string | null;
+}) {
+  const statusLabel = enabled ? "Subscribed" : unsubscribedAt ? "Unsubscribed" : "Not subscribed";
+  const badgeVariant = enabled ? "success" : unsubscribedAt ? "destructive" : "secondary";
+  const hadMarketingConsent = enabled || Boolean(unsubscribedAt);
+
   return (
-    <div className="grid gap-1 rounded-lg border p-3">
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
-      <div className="text-sm text-slate-900">{value}</div>
+    <div className="relative rounded-lg border p-4">
+      <div className="absolute right-3 top-3 group">
+        <button
+          type="button"
+          aria-label={`${label} collected at ${formatDateTime(capturedAt)}`}
+          className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+        >
+          <Info className="h-4 w-4" />
+        </button>
+        <div className="pointer-events-none absolute right-0 top-8 z-10 hidden w-max max-w-[220px] rounded-md bg-slate-900 px-2 py-1.5 text-xs text-white shadow-lg group-hover:block">
+          Collected at {formatDateTime(capturedAt)}
+        </div>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <div className="mt-3 space-y-2">
+        <Badge variant={badgeVariant}>{statusLabel}</Badge>
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {hadMarketingConsent ? <p>Signed up on {formatDateTime(capturedAt)}</p> : <p>No marketing consent recorded</p>}
+          {unsubscribedAt ? <p>Unsubscribed on {formatDateTime(unsubscribedAt)}</p> : null}
+        </div>
+      </div>
     </div>
   );
 }

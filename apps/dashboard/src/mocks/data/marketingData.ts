@@ -11,28 +11,26 @@ import type {
 } from "@repo/api-contracts";
 import { createId, sortByCreatedAtDesc } from "@repo/shared";
 
-const properties = [
-  { id: "prop_001", name: "Seabrook Cottage" },
-  { id: "prop_002", name: "Harbour View Loft" },
-  { id: "prop_003", name: "Moorland House" },
-];
-
 const firstNames = ["Sarah", "Tom", "Emma", "Priya", "James", "Hannah", "Owen", "Lucy", "Daniel", "Grace"];
 const lastNames = ["Walker", "Bennett", "Reed", "Patel", "Lewis", "Carter", "Evans", "Cole", "Turner", "Ward"];
-const contactSources: ContactSummary["source"][] = ["MANUAL_IMPORT", "CSV_IMPORT", "MANUAL_ENTRY", "WIFI_CAPTURE"];
-const contactStatuses: ContactSummary["status"][] = ["SUBSCRIBED", "UNSUBSCRIBED"];
-const defaultProperty = properties[0]!;
-
+const contactSources: ContactSummary["source"][] = ["MANUAL_ENTRY", "DIRECT_BOOKING"];
 const atIso = (date: string) => new Date(date).toISOString();
 
 const seededContacts = Array.from({ length: 36 }, (_, index): ContactDetail => {
-  const property = properties[index % properties.length] ?? defaultProperty;
   const firstName = firstNames[index % firstNames.length] ?? "Guest";
   const lastName = lastNames[index % lastNames.length] ?? "User";
-  const status = contactStatuses[index % contactStatuses.length] ?? "SUBSCRIBED";
   const source = contactSources[index % contactSources.length] ?? "MANUAL_ENTRY";
   const createdAt = atIso(`2026-02-${String((index % 20) + 1).padStart(2, "0")}T10:00:00Z`);
+  const lastContactedAt =
+    index % 4 === 0 ? null : atIso(`2026-04-${String((index % 15) + 1).padStart(2, "0")}T15:30:00Z`);
   const lastBookingAt = index % 5 === 0 ? null : atIso(`2026-03-${String((index % 18) + 1).padStart(2, "0")}T12:00:00Z`);
+  const emailMarketing = index % 4 !== 1;
+  const smsMarketing = index % 3 !== 0;
+  const status: ContactSummary["status"] = emailMarketing || smsMarketing ? "SUBSCRIBED" : "UNSUBSCRIBED";
+  const emailUnsubscribedAt =
+    !emailMarketing && index % 2 === 1 ? atIso(`2026-04-${String((index % 10) + 6).padStart(2, "0")}T09:15:00Z`) : null;
+  const smsUnsubscribedAt =
+    !smsMarketing && index % 2 === 0 ? atIso(`2026-03-${String((index % 12) + 8).padStart(2, "0")}T14:00:00Z`) : null;
 
   return {
     id: createId("contact", index + 1),
@@ -41,16 +39,18 @@ const seededContacts = Array.from({ length: 36 }, (_, index): ContactDetail => {
     email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index + 1}@guestmail.test`,
     phone: index % 4 === 0 ? null : `+447700900${String(index).padStart(3, "0")}`,
     status,
+    emailMarketing,
+    smsMarketing,
     source,
-    propertyId: property.id,
-    propertyName: property.name,
-    notes: index % 6 === 0 ? "Prefers short breaks and responds well to SMS reminders." : null,
     createdAt,
+    lastContactedAt,
     lastBookingAt,
     consents: {
-      emailMarketing: status === "SUBSCRIBED",
-      smsMarketing: index % 3 !== 0,
+      emailMarketing,
+      smsMarketing,
       capturedAt: createdAt,
+      emailUnsubscribedAt,
+      smsUnsubscribedAt,
     },
   };
 });
@@ -224,14 +224,12 @@ export const listContacts = ({
   search,
   source,
   status,
-  propertyId,
 }: {
   page?: number;
   pageSize?: number;
   search?: string;
   source?: ContactSummary["source"];
   status?: ContactSummary["status"];
-  propertyId?: string;
 }) => {
   const normalizedSearch = search?.toLowerCase().trim();
   const filtered = contacts.filter((contact) => {
@@ -243,12 +241,8 @@ export const listContacts = ({
       return false;
     }
 
-    if (propertyId && contact.propertyId !== propertyId) {
-      return false;
-    }
-
     if (normalizedSearch) {
-      const haystack = `${contact.firstName} ${contact.lastName} ${contact.email} ${contact.propertyName}`.toLowerCase();
+      const haystack = `${contact.firstName} ${contact.lastName} ${contact.email ?? ""} ${contact.phone ?? ""}`.toLowerCase();
       return haystack.includes(normalizedSearch);
     }
 
@@ -263,10 +257,11 @@ export const listContacts = ({
     email: contact.email,
     phone: contact.phone,
     status: contact.status,
+    emailMarketing: contact.emailMarketing,
+    smsMarketing: contact.smsMarketing,
     source: contact.source,
-    propertyId: contact.propertyId,
-    propertyName: contact.propertyName,
     createdAt: contact.createdAt,
+    lastContactedAt: contact.lastContactedAt,
     lastBookingAt: contact.lastBookingAt,
   }));
 
@@ -282,24 +277,25 @@ export const listContacts = ({
 export const getContactById = (contactId: string) => contacts.find((contact) => contact.id === contactId) ?? null;
 
 export const createContact = (request: CreateContactRequest) => {
-  const property = properties.find((entry) => entry.id === request.propertyId) ?? defaultProperty;
   const createdAt = new Date().toISOString();
   const contact: ContactDetail = {
     id: createId("contact", contacts.length + 1),
     firstName: request.firstName,
     lastName: request.lastName,
-    email: request.email,
+    email: request.email ?? null,
     phone: request.phone ?? null,
     status: request.consents.emailMarketing || request.consents.smsMarketing ? "SUBSCRIBED" : "UNSUBSCRIBED",
+    emailMarketing: request.consents.emailMarketing,
+    smsMarketing: request.consents.smsMarketing,
     source: "MANUAL_ENTRY",
-    propertyId: property.id,
-    propertyName: property.name,
-    notes: request.notes ?? null,
     createdAt,
+    lastContactedAt: null,
     lastBookingAt: null,
     consents: {
       ...request.consents,
       capturedAt: createdAt,
+      emailUnsubscribedAt: null,
+      smsUnsubscribedAt: null,
     },
   };
 
@@ -307,14 +303,99 @@ export const createContact = (request: CreateContactRequest) => {
   return { id: contact.id };
 };
 
-export const importContacts = () => ({
-  importId: "import_0001",
-  status: "COMPLETED" as const,
-  totalRows: 12,
-  importedRows: 11,
-  failedRows: 1,
-  errors: [{ rowNumber: 7, message: "Email address is invalid" }],
-});
+export const importContacts = (csvText: string) => {
+  const rows = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (rows.length <= 1) {
+    return {
+      importId: "import_0001",
+      status: "FAILED" as const,
+      totalRows: 0,
+      importedRows: 0,
+      failedRows: 0,
+      errors: [{ rowNumber: 1, message: "CSV file does not contain any contact rows" }],
+    };
+  }
+
+  const [headerLine, ...dataLines] = rows;
+  const headers = splitCsvLine(headerLine);
+  const errors: Array<{ rowNumber: number; message: string }> = [];
+  const importedContacts: ContactDetail[] = [];
+
+  dataLines.forEach((line, index) => {
+    const values = splitCsvLine(line);
+    const record = Object.fromEntries(headers.map((header, columnIndex) => [header, values[columnIndex] ?? ""]));
+    const rowNumber = index + 2;
+    const email = record.email?.trim() || null;
+    const phone = record.phone?.trim() || null;
+    const emailMarketing = record.emailMarketing?.trim().toLowerCase() === "true";
+    const smsMarketing = record.smsMarketing?.trim().toLowerCase() === "true";
+
+    if (!record.firstName?.trim() || !record.lastName?.trim()) {
+      errors.push({ rowNumber, message: "First name and last name are required" });
+      return;
+    }
+
+    if (!email && !phone) {
+      errors.push({ rowNumber, message: "At least one of email or phone is required" });
+      return;
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.push({ rowNumber, message: "Email address is invalid" });
+      return;
+    }
+
+    if (emailMarketing && !email) {
+      errors.push({ rowNumber, message: "Email marketing requires an email address" });
+      return;
+    }
+
+    if (smsMarketing && !phone) {
+      errors.push({ rowNumber, message: "SMS marketing requires a phone number" });
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    importedContacts.push({
+      id: createId("contact", contacts.length + importedContacts.length + 1),
+      firstName: record.firstName.trim(),
+      lastName: record.lastName.trim(),
+      email,
+      phone,
+      status: emailMarketing || smsMarketing ? "SUBSCRIBED" : "UNSUBSCRIBED",
+      emailMarketing,
+      smsMarketing,
+      source: "MANUAL_ENTRY",
+      createdAt,
+      lastContactedAt: null,
+      lastBookingAt: null,
+      consents: {
+        emailMarketing,
+        smsMarketing,
+        capturedAt: createdAt,
+        emailUnsubscribedAt: null,
+        smsUnsubscribedAt: null,
+      },
+    });
+  });
+
+  if (errors.length === 0) {
+    contacts = [...importedContacts, ...contacts];
+  }
+
+  return {
+    importId: "import_0001",
+    status: errors.length > 0 ? ("FAILED" as const) : ("COMPLETED" as const),
+    totalRows: dataLines.length,
+    importedRows: errors.length > 0 ? 0 : importedContacts.length,
+    failedRows: errors.length > 0 ? dataLines.length : 0,
+    errors,
+  };
+};
 
 export const listCampaigns = () => ({
   items: sortByCreatedAtDesc(campaigns).map(toCampaignSummary),
@@ -374,3 +455,7 @@ export const resetMarketingState = () => {
   contacts = [...seededContacts];
   campaigns = [...seededCampaigns];
 };
+
+function splitCsvLine(line: string) {
+  return line.split(",").map((value) => value.trim());
+}

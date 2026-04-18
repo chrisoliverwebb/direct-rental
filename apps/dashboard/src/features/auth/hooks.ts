@@ -34,9 +34,10 @@ export const useLogoutMutation = () => {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: async () => {
+      await queryClient.cancelQueries({ queryKey: authKeys.me() });
       clearStoredAccessToken();
       queryClient.setQueryData(authKeys.me(), null);
-      await queryClient.invalidateQueries({ queryKey: authKeys.me() });
+      queryClient.removeQueries({ queryKey: authKeys.me() });
     },
   });
 };

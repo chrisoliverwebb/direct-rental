@@ -1,0 +1,7 @@
+first_name,surname,email_address,mobile_number,marketing_email,marketing_sms
+Sarah,Walker,sarah.walker@example.com,+447700900101,true,false
+Tom,Bennett,tom.bennett@example.com,,true,false
+Emma,Reed,,+447700900103,false,true
+Priya,Patel,priya.patel@example.com,+447700900104,true,true
+James,Lewis,,+447700900105,false,false
+Hannah,Carter,hannah.carter@example.com,,false,false

@@ -28,7 +28,6 @@ export const marketingHandlers = [
       search: url.searchParams.get("search") ?? undefined,
       status: url.searchParams.get("status") ?? undefined,
       source: url.searchParams.get("source") ?? undefined,
-      propertyId: url.searchParams.get("propertyId") ?? undefined,
     });
 
     return HttpResponse.json(listContacts(query));
@@ -46,7 +45,17 @@ export const marketingHandlers = [
     const body = createContactRequestSchema.parse(await request.json());
     return HttpResponse.json(createContact(body), { status: 201 });
   }),
-  http.post("*/api/v1/marketing/contacts/import", async () => HttpResponse.json(importContacts())),
+  http.post("*/api/v1/marketing/contacts/import", async ({ request }) => {
+    const formData = await request.formData();
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      return HttpResponse.json({ message: "CSV file is required" }, { status: 400 });
+    }
+
+    await delay(1200);
+    return HttpResponse.json(importContacts(await file.text()));
+  }),
   http.get("*/api/v1/marketing/campaigns", async () => HttpResponse.json(listCampaigns())),
   http.get("*/api/v1/marketing/campaigns/:campaignId", async ({ params }) => {
     const campaign = getCampaignById(String(params.campaignId));
@@ -69,3 +78,5 @@ export const marketingHandlers = [
     HttpResponse.json(sendCampaign(String(params.campaignId)))),
   http.get("*/api/v1/marketing/templates", async () => HttpResponse.json(listTemplates())),
 ];
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
