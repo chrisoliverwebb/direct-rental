@@ -5,7 +5,7 @@ import { ChevronLeft, Info, Mail, Phone } from "lucide-react";
 import { contactSourceLabel, contactStatusLabel } from "@repo/marketing";
 import { formatDate, formatDateTime } from "@repo/shared";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { useContact } from "@/features/marketing/hooks";

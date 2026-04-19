@@ -5,10 +5,12 @@ import type {
   ContactSummary,
   CreateCampaignRequest,
   CreateContactRequest,
+  CreateContactsRequest,
   MarketingDashboard,
   ScheduledCampaignSummary,
   TemplateSummary,
 } from "@repo/api-contracts";
+import { createContactRequestSchema } from "@repo/api-contracts";
 import { createId, sortByCreatedAtDesc } from "@repo/shared";
 
 const firstNames = ["Sarah", "Tom", "Emma", "Priya", "James", "Hannah", "Owen", "Lucy", "Daniel", "Grace"];
@@ -303,67 +305,41 @@ export const createContact = (request: CreateContactRequest) => {
   return { id: contact.id };
 };
 
-export const importContacts = (csvText: string) => {
-  const rows = csvText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (rows.length <= 1) {
+export const importContacts = (requests: CreateContactsRequest["contacts"]) => {
+  if (requests.length === 0) {
     return {
       importId: "import_0001",
       status: "FAILED" as const,
       totalRows: 0,
       importedRows: 0,
       failedRows: 0,
-      errors: [{ rowNumber: 1, message: "CSV file does not contain any contact rows" }],
+      errors: [{ rowNumber: 1, message: "No contacts were provided" }],
     };
   }
 
-  const [headerLine, ...dataLines] = rows;
-  const headers = splitCsvLine(headerLine);
   const errors: Array<{ rowNumber: number; message: string }> = [];
   const importedContacts: ContactDetail[] = [];
 
-  dataLines.forEach((line, index) => {
-    const values = splitCsvLine(line);
-    const record = Object.fromEntries(headers.map((header, columnIndex) => [header, values[columnIndex] ?? ""]));
+  requests.forEach((request, index) => {
     const rowNumber = index + 2;
-    const email = record.email?.trim() || null;
-    const phone = record.phone?.trim() || null;
-    const emailMarketing = record.emailMarketing?.trim().toLowerCase() === "true";
-    const smsMarketing = record.smsMarketing?.trim().toLowerCase() === "true";
+    const parsed = createContactRequestSchema.safeParse(request);
 
-    if (!record.firstName?.trim() || !record.lastName?.trim()) {
-      errors.push({ rowNumber, message: "First name and last name are required" });
+    if (!parsed.success) {
+      errors.push({ rowNumber, message: parsed.error.issues[0]?.message ?? "Contact row is invalid" });
       return;
     }
 
-    if (!email && !phone) {
-      errors.push({ rowNumber, message: "At least one of email or phone is required" });
-      return;
-    }
-
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.push({ rowNumber, message: "Email address is invalid" });
-      return;
-    }
-
-    if (emailMarketing && !email) {
-      errors.push({ rowNumber, message: "Email marketing requires an email address" });
-      return;
-    }
-
-    if (smsMarketing && !phone) {
-      errors.push({ rowNumber, message: "SMS marketing requires a phone number" });
-      return;
-    }
+    const validRequest = parsed.data;
+    const email = validRequest.email ?? null;
+    const phone = validRequest.phone ?? null;
+    const emailMarketing = validRequest.consents.emailMarketing;
+    const smsMarketing = validRequest.consents.smsMarketing;
 
     const createdAt = new Date().toISOString();
     importedContacts.push({
       id: createId("contact", contacts.length + importedContacts.length + 1),
-      firstName: record.firstName.trim(),
-      lastName: record.lastName.trim(),
+      firstName: validRequest.firstName.trim(),
+      lastName: validRequest.lastName.trim(),
       email,
       phone,
       status: emailMarketing || smsMarketing ? "SUBSCRIBED" : "UNSUBSCRIBED",
@@ -390,9 +366,9 @@ export const importContacts = (csvText: string) => {
   return {
     importId: "import_0001",
     status: errors.length > 0 ? ("FAILED" as const) : ("COMPLETED" as const),
-    totalRows: dataLines.length,
+    totalRows: requests.length,
     importedRows: errors.length > 0 ? 0 : importedContacts.length,
-    failedRows: errors.length > 0 ? dataLines.length : 0,
+    failedRows: errors.length > 0 ? requests.length : 0,
     errors,
   };
 };
@@ -455,7 +431,3 @@ export const resetMarketingState = () => {
   contacts = [...seededContacts];
   campaigns = [...seededCampaigns];
 };
-
-function splitCsvLine(line: string) {
-  return line.split(",").map((value) => value.trim());
-}

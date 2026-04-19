@@ -6,6 +6,7 @@ import {
   contactListResponseSchema,
   createCampaignRequestSchema,
   createContactRequestSchema,
+  createContactsRequestSchema,
   createEntityResponseSchema,
   getContactsQuerySchema,
   marketingDashboardSchema,
@@ -20,6 +21,7 @@ import {
   type ContactSummary,
   type CreateCampaignRequest,
   type CreateContactRequest,
+  type CreateContactsRequest,
   type CreateEntityResponse,
   type GetContactsQuery,
   type MarketingDashboard,
@@ -49,7 +51,7 @@ export interface MarketingApi {
   getContacts(query: GetContactsQuery): Promise<PaginatedResponse<ContactSummary>>;
   getContact(contactId: string): Promise<ContactDetail>;
   createContact(request: CreateContactRequest): Promise<CreateEntityResponse>;
-  importContacts(formData: FormData): Promise<ContactImportResult>;
+  importContacts(request: CreateContactsRequest): Promise<ContactImportResult>;
   getCampaigns(): Promise<PaginatedResponse<CampaignSummary>>;
   getCampaign(campaignId: string): Promise<CampaignDetail>;
   createCampaign(request: CreateCampaignRequest): Promise<CreateEntityResponse>;
@@ -80,10 +82,10 @@ export const marketingApi: MarketingApi = {
       body: JSON.stringify(createContactRequestSchema.parse(request)),
       schema: createEntityResponseSchema,
     }),
-  importContacts: async (formData) =>
+  importContacts: async (request) =>
     fetcher<ContactImportResult>("/v1/marketing/contacts/import", {
       method: "POST",
-      body: formData,
+      body: JSON.stringify(createContactsRequestSchema.parse(request)),
       schema: contactImportResultSchema,
     }),
   getCampaigns: async () =>

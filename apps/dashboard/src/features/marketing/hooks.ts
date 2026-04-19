@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateCampaignRequest,
   CreateContactRequest,
+  CreateContactsRequest,
   GetContactsQuery,
   SendCampaignRequest,
   UpdateCampaignRequest,
@@ -44,7 +45,7 @@ export const useImportContacts = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (formData: FormData) => marketingApi.importContacts(formData),
+    mutationFn: (request: CreateContactsRequest) => marketingApi.importContacts(request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.all });
     },

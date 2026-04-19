@@ -137,6 +137,12 @@ export const createContactRequestSchema = z.object({
 
 export type CreateContactRequest = z.infer<typeof createContactRequestSchema>;
 
+export const createContactsRequestSchema = z.object({
+  contacts: z.array(createContactRequestSchema).min(1, "At least one contact is required"),
+});
+
+export type CreateContactsRequest = z.infer<typeof createContactsRequestSchema>;
+
 export const createEntityResponseSchema = z.object({
   id: z.string().min(1),
 });

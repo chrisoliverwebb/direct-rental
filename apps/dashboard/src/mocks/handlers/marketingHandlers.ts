@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import {
   createCampaignRequestSchema,
   createContactRequestSchema,
+  createContactsRequestSchema,
   getContactsQuerySchema,
 } from "@repo/api-contracts";
 import {
@@ -46,15 +47,9 @@ export const marketingHandlers = [
     return HttpResponse.json(createContact(body), { status: 201 });
   }),
   http.post("*/api/v1/marketing/contacts/import", async ({ request }) => {
-    const formData = await request.formData();
-    const file = formData.get("file");
-
-    if (!(file instanceof File)) {
-      return HttpResponse.json({ message: "CSV file is required" }, { status: 400 });
-    }
-
     await delay(1200);
-    return HttpResponse.json(importContacts(await file.text()));
+    const body = createContactsRequestSchema.parse(await request.json());
+    return HttpResponse.json(importContacts(body.contacts));
   }),
   http.get("*/api/v1/marketing/campaigns", async () => HttpResponse.json(listCampaigns())),
   http.get("*/api/v1/marketing/campaigns/:campaignId", async ({ params }) => {
