@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { createPaginatedResponseSchema, isoDateStringSchema } from "@repo/shared";
+import { emailDocumentSchema } from "./email-editor";
 
 export const campaignStatusSchema = z.enum(["DRAFT", "SCHEDULED", "SENT"]);
+export const draftCampaignStatusSchema = z.literal("DRAFT");
+export const publishedCampaignStatusSchema = z.enum(["SCHEDULED", "SENT"]);
 export const campaignChannelSchema = z.enum(["EMAIL", "SMS"]);
 export const contactStatusSchema = z.enum(["SUBSCRIBED", "UNSUBSCRIBED"]);
 export const contactSourceSchema = z.enum([
@@ -12,7 +15,7 @@ export const contactSourceSchema = z.enum([
 export const campaignSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: campaignStatusSchema,
+  status: publishedCampaignStatusSchema,
   channel: campaignChannelSchema,
   subject: z.string().nullable(),
   recipientCount: z.number().int().min(0),
@@ -24,6 +27,18 @@ export const campaignSummarySchema = z.object({
 });
 
 export type CampaignSummary = z.infer<typeof campaignSummarySchema>;
+
+export const draftCampaignSummarySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  status: draftCampaignStatusSchema,
+  channel: campaignChannelSchema,
+  subject: z.string().nullable(),
+  previewText: z.string().nullable(),
+  createdAt: isoDateStringSchema,
+});
+
+export type DraftCampaignSummary = z.infer<typeof draftCampaignSummarySchema>;
 
 export const scheduledCampaignSummarySchema = z.object({
   id: z.string(),
@@ -165,15 +180,16 @@ export const contactImportResultSchema = z.object({
 
 export type ContactImportResult = z.infer<typeof contactImportResultSchema>;
 
-export const campaignDetailSchema = z.object({
+const draftCampaignDetailSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
-  status: campaignStatusSchema,
+  status: draftCampaignStatusSchema,
   channel: campaignChannelSchema,
   subject: z.string().nullable(),
   previewText: z.string().nullable(),
   contentHtml: z.string().min(1),
   contentText: z.string().min(1),
+  contentDocument: emailDocumentSchema.nullable().optional(),
   recipientSelection: z.object({
     type: z.literal("ALL_SUBSCRIBED"),
   }),
@@ -181,6 +197,28 @@ export const campaignDetailSchema = z.object({
   sentAt: isoDateStringSchema.nullable(),
   createdAt: isoDateStringSchema,
 });
+
+export type DraftCampaignDetail = z.infer<typeof draftCampaignDetailSchema>;
+
+const publishedCampaignDetailSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  status: publishedCampaignStatusSchema,
+  channel: campaignChannelSchema,
+  subject: z.string().nullable(),
+  previewText: z.string().nullable(),
+  contentHtml: z.string().min(1),
+  contentText: z.string().min(1),
+  contentDocument: emailDocumentSchema.nullable().optional(),
+  recipientSelection: z.object({
+    type: z.literal("ALL_SUBSCRIBED"),
+  }),
+  scheduledAt: isoDateStringSchema.nullable(),
+  sentAt: isoDateStringSchema.nullable(),
+  createdAt: isoDateStringSchema,
+});
+
+export const campaignDetailSchema = z.union([draftCampaignDetailSchema, publishedCampaignDetailSchema]);
 
 export type CampaignDetail = z.infer<typeof campaignDetailSchema>;
 
@@ -192,6 +230,7 @@ export const createCampaignRequestSchema = z
     previewText: z.string().nullable(),
     contentHtml: z.string().trim().min(1, "HTML content is required"),
     contentText: z.string().trim().min(1, "Plain text content is required"),
+    contentDocument: emailDocumentSchema.nullable().optional(),
     recipientSelection: z.object({
       type: z.literal("ALL_SUBSCRIBED"),
     }),
@@ -244,3 +283,4 @@ export type TemplateListResponse = z.infer<typeof templateListResponseSchema>;
 
 export const contactListResponseSchema = createPaginatedResponseSchema(contactSummarySchema);
 export const campaignListResponseSchema = createPaginatedResponseSchema(campaignSummarySchema);
+export const draftCampaignListResponseSchema = createPaginatedResponseSchema(draftCampaignSummarySchema);

@@ -15,11 +15,20 @@ const navigation = [
   { href: "/templates", label: "Templates", icon: FileText },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type AppShellProps = {
+  children: React.ReactNode;
+  compactShell?: boolean;
+};
+
+export function AppShell({ children, compactShell = false }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogoutMutation();
+
+  if (compactShell) {
+    return <div className="min-h-screen bg-slate-50">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

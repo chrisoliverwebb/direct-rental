@@ -8,15 +8,27 @@ import type {
   CreateContactsRequest,
   MarketingDashboard,
   ScheduledCampaignSummary,
+  DraftCampaignDetail,
+  DraftCampaignSummary,
   TemplateSummary,
 } from "@repo/api-contracts";
 import { createContactRequestSchema } from "@repo/api-contracts";
+import { createEmailDocumentFromCampaignContent } from "@repo/marketing";
 import { createId, sortByCreatedAtDesc } from "@repo/shared";
+
+type LiveCampaign = Extract<CampaignDetail, { status: "SCHEDULED" | "SENT" }>;
 
 const firstNames = ["Sarah", "Tom", "Emma", "Priya", "James", "Hannah", "Owen", "Lucy", "Daniel", "Grace"];
 const lastNames = ["Walker", "Bennett", "Reed", "Patel", "Lewis", "Carter", "Evans", "Cole", "Turner", "Ward"];
 const contactSources: ContactSummary["source"][] = ["MANUAL_ENTRY", "DIRECT_BOOKING"];
 const atIso = (date: string) => new Date(date).toISOString();
+const seedEmailDocument = (name: string, subject: string | null, previewText: string | null, contentText: string) =>
+  createEmailDocumentFromCampaignContent({
+    name,
+    subject,
+    previewText,
+    contentText,
+  });
 
 const seededContacts = Array.from({ length: 36 }, (_, index): ContactDetail => {
   const firstName = firstNames[index % firstNames.length] ?? "Guest";
@@ -57,7 +69,7 @@ const seededContacts = Array.from({ length: 36 }, (_, index): ContactDetail => {
   };
 });
 
-const seededCampaigns: CampaignDetail[] = [
+const seededDraftCampaigns: DraftCampaignDetail[] = [
   {
     id: "camp_0001",
     name: "Late spring direct-booking push",
@@ -67,6 +79,12 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: "Offer returning guests first access to two open weekends.",
     contentHtml: "<p>We have two late spring weekends available.</p>",
     contentText: "We have two late spring weekends available.",
+    contentDocument: seedEmailDocument(
+      "Late spring direct-booking push",
+      "Late spring weekends just opened up",
+      "Offer returning guests first access to two open weekends.",
+      "We have two late spring weekends available.",
+    ),
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: null,
     sentAt: null,
@@ -81,6 +99,7 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: null,
     contentHtml: "<p>May bank holiday dates are available for past guests.</p>",
     contentText: "May bank holiday dates are available for past guests.",
+    contentDocument: null,
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: null,
     sentAt: null,
@@ -95,11 +114,20 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: "Returning guest pricing for July stays.",
     contentHtml: "<p>Come back this summer with a returning guest rate.</p>",
     contentText: "Come back this summer with a returning guest rate.",
+    contentDocument: seedEmailDocument(
+      "Summer return guest offer",
+      "A summer offer for past guests",
+      "Returning guest pricing for July stays.",
+      "Come back this summer with a returning guest rate.",
+    ),
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: null,
     sentAt: null,
     createdAt: atIso("2026-04-05T09:00:00Z"),
   },
+];
+
+const seededCampaigns: LiveCampaign[] = [
   {
     id: "camp_0004",
     name: "Easter follow-up",
@@ -109,6 +137,12 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: "Invite recent guests back for summer.",
     contentHtml: "<p>Thanks for staying with us this Easter.</p>",
     contentText: "Thanks for staying with us this Easter.",
+    contentDocument: seedEmailDocument(
+      "Easter follow-up",
+      "Thanks for staying with us",
+      "Invite recent guests back for summer.",
+      "Thanks for staying with us this Easter.",
+    ),
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: null,
     sentAt: atIso("2026-03-30T08:00:00Z"),
@@ -123,6 +157,7 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: null,
     contentHtml: "<p>Last-minute weekend availability for past guests.</p>",
     contentText: "Last-minute weekend availability for past guests.",
+    contentDocument: null,
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: null,
     sentAt: atIso("2026-03-21T13:00:00Z"),
@@ -137,6 +172,12 @@ const seededCampaigns: CampaignDetail[] = [
     previewText: "Past guests can book before public release.",
     contentHtml: "<p>June half-term is open for past guests first.</p>",
     contentText: "June half-term is open for past guests first.",
+    contentDocument: seedEmailDocument(
+      "June half-term early access",
+      "Early access for June half-term",
+      "Past guests can book before public release.",
+      "June half-term is open for past guests first.",
+    ),
     recipientSelection: { type: "ALL_SUBSCRIBED" },
     scheduledAt: atIso("2026-04-25T09:30:00Z"),
     sentAt: null,
@@ -180,9 +221,10 @@ const seededTemplates: TemplateSummary[] = [
 ];
 
 let contacts = [...seededContacts];
+let draftCampaigns = [...seededDraftCampaigns];
 let campaigns = [...seededCampaigns];
 
-const toCampaignSummary = (campaign: CampaignDetail): CampaignSummary => ({
+const toCampaignSummary = (campaign: LiveCampaign): CampaignSummary => ({
   id: campaign.id,
   name: campaign.name,
   status: campaign.status,
@@ -193,6 +235,16 @@ const toCampaignSummary = (campaign: CampaignDetail): CampaignSummary => ({
   sentAt: campaign.sentAt,
   openRate: campaign.status === "SENT" ? 0.42 : null,
   clickRate: campaign.status === "SENT" ? 0.11 : null,
+  createdAt: campaign.createdAt,
+});
+
+const toDraftCampaignSummary = (campaign: DraftCampaignDetail): DraftCampaignSummary => ({
+  id: campaign.id,
+  name: campaign.name,
+  status: "DRAFT",
+  channel: campaign.channel,
+  subject: campaign.subject,
+  previewText: campaign.previewText,
   createdAt: campaign.createdAt,
 });
 
@@ -214,7 +266,7 @@ export const getDashboard = (): MarketingDashboard => {
     unsubscribedContactCount: contacts.filter((contact) => contact.status === "UNSUBSCRIBED").length,
     campaignCount: campaigns.length,
     sentCampaignCount: campaigns.filter((campaign) => campaign.status === "SENT").length,
-    draftCampaignCount: campaigns.filter((campaign) => campaign.status === "DRAFT").length,
+    draftCampaignCount: draftCampaigns.length,
     recentCampaigns,
     upcomingCampaigns,
   };
@@ -373,6 +425,14 @@ export const importContacts = (requests: CreateContactsRequest["contacts"]) => {
   };
 };
 
+export const listDraftCampaigns = () => ({
+  items: sortByCreatedAtDesc(draftCampaigns).map(toDraftCampaignSummary),
+  page: 1,
+  pageSize: draftCampaigns.length,
+  totalItems: draftCampaigns.length,
+  totalPages: 1,
+});
+
 export const listCampaigns = () => ({
   items: sortByCreatedAtDesc(campaigns).map(toCampaignSummary),
   page: 1,
@@ -381,11 +441,14 @@ export const listCampaigns = () => ({
   totalPages: 1,
 });
 
-export const getCampaignById = (campaignId: string) => campaigns.find((campaign) => campaign.id === campaignId) ?? null;
+export const getCampaignById = (campaignId: string) =>
+  draftCampaigns.find((campaign) => campaign.id === campaignId) ??
+  campaigns.find((campaign) => campaign.id === campaignId) ??
+  null;
 
 export const createCampaign = (request: CreateCampaignRequest) => {
-  const campaign: CampaignDetail = {
-    id: createId("camp", campaigns.length + 1),
+  const campaign: DraftCampaignDetail = {
+    id: createId("camp", draftCampaigns.length + campaigns.length + 1),
     status: "DRAFT",
     createdAt: new Date().toISOString(),
     scheduledAt: null,
@@ -393,12 +456,12 @@ export const createCampaign = (request: CreateCampaignRequest) => {
     ...request,
   };
 
-  campaigns = [campaign, ...campaigns];
+  draftCampaigns = [campaign, ...draftCampaigns];
   return { id: campaign.id };
 };
 
 export const updateCampaign = (campaignId: string, request: CreateCampaignRequest) => {
-  campaigns = campaigns.map((campaign) =>
+  draftCampaigns = draftCampaigns.map((campaign) =>
     campaign.id === campaignId
       ? {
           ...campaign,
@@ -411,16 +474,19 @@ export const updateCampaign = (campaignId: string, request: CreateCampaignReques
 };
 
 export const sendCampaign = (campaignId: string) => {
-  campaigns = campaigns.map((campaign) =>
-    campaign.id === campaignId
-      ? {
-          ...campaign,
-          status: "SENT",
-          sentAt: new Date().toISOString(),
-          scheduledAt: null,
-        }
-      : campaign,
-  );
+  const draft = draftCampaigns.find((campaign) => campaign.id === campaignId);
+
+  if (draft) {
+    const sentCampaign: LiveCampaign = {
+      ...draft,
+      status: "SENT",
+      sentAt: new Date().toISOString(),
+      scheduledAt: null,
+    };
+
+    draftCampaigns = draftCampaigns.filter((campaign) => campaign.id !== campaignId);
+    campaigns = [sentCampaign, ...campaigns];
+  }
 
   return { id: campaignId, status: "SENT" as const };
 };
@@ -429,5 +495,6 @@ export const listTemplates = () => ({ items: seededTemplates });
 
 export const resetMarketingState = () => {
   contacts = [...seededContacts];
+  draftCampaigns = [...seededDraftCampaigns];
   campaigns = [...seededCampaigns];
 };

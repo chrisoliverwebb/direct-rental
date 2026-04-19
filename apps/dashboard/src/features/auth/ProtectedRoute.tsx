@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { useCurrentUser } from "@/features/auth/hooks";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const currentUserQuery = useCurrentUser();
+  const compactShell = pathname === "/campaigns/new" || /^\/campaigns\/[^/]+$/.test(pathname);
 
   useEffect(() => {
     if (!currentUserQuery.isLoading && !currentUserQuery.data) {
@@ -28,5 +30,5 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell compactShell={compactShell}>{children}</AppShell>;
 }

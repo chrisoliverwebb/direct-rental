@@ -52,6 +52,12 @@ export const useImportContacts = () => {
   });
 };
 
+export const useDraftCampaigns = () =>
+  useQuery({
+    queryKey: marketingKeys.draftCampaigns(),
+    queryFn: () => marketingApi.getDraftCampaigns(),
+  });
+
 export const useCampaigns = () =>
   useQuery({
     queryKey: marketingKeys.campaigns(),

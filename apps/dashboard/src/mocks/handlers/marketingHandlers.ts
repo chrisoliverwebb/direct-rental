@@ -12,6 +12,7 @@ import {
   getContactById,
   getDashboard,
   importContacts,
+  listDraftCampaigns,
   listCampaigns,
   listContacts,
   listTemplates,
@@ -52,6 +53,7 @@ export const marketingHandlers = [
     return HttpResponse.json(importContacts(body.contacts));
   }),
   http.get("*/api/v1/marketing/campaigns", async () => HttpResponse.json(listCampaigns())),
+  http.get("*/api/v1/marketing/campaigns/drafts", async () => HttpResponse.json(listDraftCampaigns())),
   http.get("*/api/v1/marketing/campaigns/:campaignId", async ({ params }) => {
     const campaign = getCampaignById(String(params.campaignId));
 
