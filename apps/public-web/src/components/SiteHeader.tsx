@@ -1,4 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
+import { DirectRentalLogoTile, brandName } from "@repo/brand";
 
 type SiteHeaderProps = {
   ctaHref?: string;
@@ -17,10 +18,8 @@ export function SiteHeader({
             to="/"
             className="flex items-center gap-3 text-center text-sm font-semibold uppercase tracking-[0.24em] text-ink sm:text-left"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-md bg-ink text-white">
-              <LogoMark />
-            </span>
-            Direct Rental
+            <DirectRentalLogoTile className="bg-ink text-white" />
+            {brandName}
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-ink/70">
             <NavLink
@@ -64,22 +63,5 @@ export function SiteHeader({
         </a>
       </div>
     </header>
-  );
-}
-
-function LogoMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5 stroke-current"
-      fill="none"
-      strokeWidth="1.8"
-      aria-hidden="true"
-    >
-      <path d="M4 19V9.5L12 4l8 5.5V19" />
-      <path d="M9 19v-5h6v5" />
-      <path d="M8 11h.01" />
-      <path d="M16 11h.01" />
-    </svg>
   );
 }
