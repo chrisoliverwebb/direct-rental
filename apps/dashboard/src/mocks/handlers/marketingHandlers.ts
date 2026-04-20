@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import {
+  createSavedEmailBlockRequestSchema,
   createCampaignRequestSchema,
   createContactRequestSchema,
   createContactsRequestSchema,
@@ -8,13 +9,16 @@ import {
   sendCampaignRequestSchema,
 } from "@repo/api-contracts";
 import {
+  createSavedBlock,
   createCampaign,
   createContact,
+  deleteSavedBlock,
   deleteCampaign,
   getCampaignById,
   getContactById,
   getDashboard,
   importContacts,
+  listSavedBlocks,
   listDraftCampaigns,
   listCampaigns,
   listContacts,
@@ -91,6 +95,15 @@ export const marketingHandlers = [
   }),
   http.delete("*/api/v1/marketing/campaigns/:campaignId", ({ params }) => {
     deleteCampaign(String(params.campaignId));
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get("*/api/v1/marketing/saved-blocks", async () => HttpResponse.json(listSavedBlocks())),
+  http.post("*/api/v1/marketing/saved-blocks", async ({ request }) => {
+    const body = createSavedEmailBlockRequestSchema.parse(await request.json());
+    return HttpResponse.json(createSavedBlock(body), { status: 201 });
+  }),
+  http.delete("*/api/v1/marketing/saved-blocks/:savedBlockId", ({ params }) => {
+    deleteSavedBlock(String(params.savedBlockId));
     return new HttpResponse(null, { status: 204 });
   }),
   http.get("*/api/v1/marketing/templates", async () => HttpResponse.json(listTemplates())),

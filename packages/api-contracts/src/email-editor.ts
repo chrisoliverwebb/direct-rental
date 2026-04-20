@@ -7,6 +7,10 @@ export const emailTextContentSchema = z.object({
 
 export type EmailTextContent = z.infer<typeof emailTextContentSchema>;
 
+export const emailTextStyleSchema = z.enum(["p", "h1", "h2", "h3"]);
+
+export type EmailTextStyle = z.infer<typeof emailTextStyleSchema>;
+
 export const emailBlockStylesSchema = z.object({
   paddingTop: z.number().int().min(0).optional(),
   paddingRight: z.number().int().min(0).optional(),
@@ -33,6 +37,7 @@ const emailBaseBlockSchema = z.object({
 
 export const emailTextBlockSchema = emailBaseBlockSchema.extend({
   type: z.literal("text"),
+  textStyle: emailTextStyleSchema.default("p"),
   content: emailTextContentSchema,
 });
 

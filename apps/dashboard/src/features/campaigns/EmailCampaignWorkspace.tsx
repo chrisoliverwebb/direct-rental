@@ -17,7 +17,12 @@ import { useRouter } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Blocks,
   Bold,
+  BookmarkPlus,
   Copy,
   Eye,
   EyeOff,
@@ -25,8 +30,6 @@ import {
   Image as ImageIcon,
   LayoutGrid,
   Minus,
-  PanelBottom,
-  PanelTop,
   Italic,
   Save,
   Send,
@@ -41,10 +44,12 @@ import {
   createCampaignRequestSchema,
   type CampaignDetail,
   type CreateCampaignRequest,
+  type CreateSavedEmailBlockRequest,
   type EmailBlock,
   type EmailColumn,
   type EmailDocument,
-  type EmailTextContent,
+  type EmailGroupBlock,
+  type SavedEmailBlock,
   type SendCampaignRequest,
 } from "@repo/api-contracts";
 import {
@@ -72,6 +77,7 @@ import {
 import { ColourInput } from "@/components/ui/colour-input";
 import { CampaignEmailEditor } from "@/features/campaigns/CampaignEmailEditor";
 import { EmailCampaignPreview } from "@/features/campaigns/EmailCampaignPreview";
+import { useCreateSavedBlock, useDeleteSavedBlock, useSavedBlocks } from "@/features/marketing/hooks";
 import { cn } from "@/lib/utils";
 
 type EmailCampaignWorkspaceProps = {
@@ -95,15 +101,19 @@ type BlockLibraryItem = {
 };
 
 const blockLibrary: BlockLibraryItem[] = [
-  { type: "header", label: "Header", description: "Brand header and intro", icon: PanelTop },
   { type: "text", label: "Text", description: "Rich text content", icon: Type },
   { type: "image", label: "Image", description: "Image with optional link", icon: ImageIcon },
   { type: "button", label: "Button", description: "Call to action", icon: Square },
   { type: "divider", label: "Divider", description: "A thin dividing line", icon: Minus },
   { type: "spacer", label: "Spacer", description: "Vertical white space", icon: LayoutGrid },
   { type: "columns", label: "Columns", description: "Two column layout", icon: Columns2 },
-  { type: "footer", label: "Footer", description: "Legal and sign off", icon: PanelBottom },
+  { type: "group", label: "Group", description: "Reusable section container", icon: Blocks },
 ];
+
+type PendingSavedBlock = {
+  blockId: string;
+  name: string;
+};
 
 type BlockParent =
   | {
@@ -113,6 +123,10 @@ type BlockParent =
       type: "column";
       columnsBlockId: string;
       columnId: string;
+    }
+  | {
+      type: "group";
+      groupBlockId: string;
     };
 
 const ROOT_PARENT: BlockParent = { type: "root" };
@@ -134,6 +148,13 @@ function findBlockById(blocks: EmailBlock[], blockId: string): EmailBlock | null
         if (nested) {
           return nested;
         }
+      }
+    }
+
+    if (block.type === "group") {
+      const nested = findBlockById(block.blocks, blockId);
+      if (nested) {
+        return nested;
       }
     }
   }
@@ -164,6 +185,16 @@ function findBlockLocation(blocks: EmailBlock[], blockId: string, parent: BlockP
         }
       }
     }
+
+    if (block.type === "group") {
+      const nested = findBlockLocation(block.blocks, blockId, {
+        type: "group",
+        groupBlockId: block.id,
+      });
+      if (nested) {
+        return nested;
+      }
+    }
   }
 
   return null;
@@ -174,6 +205,18 @@ function insertBlockIntoParent(blocks: EmailBlock[], parent: BlockParent, index:
     const nextBlocks = [...blocks];
     nextBlocks.splice(index, 0, nextBlock);
     return nextBlocks;
+  }
+
+  if (parent.type === "group") {
+    return blocks.map((block) => {
+      if (block.type !== "group" || block.id !== parent.groupBlockId) {
+        return block;
+      }
+
+      const nextBlocks = [...block.blocks];
+      nextBlocks.splice(index, 0, nextBlock);
+      return { ...block, blocks: nextBlocks };
+    });
   }
 
   return blocks.map((block) => {
@@ -203,6 +246,11 @@ function updateBlockById(blocks: EmailBlock[], blockId: string, updater: (block:
     }
 
     if (block.type !== "columns") {
+      if (block.type === "group") {
+        const nextBlocks = updateBlockById(block.blocks, blockId, updater);
+        return nextBlocks !== block.blocks ? { ...block, blocks: nextBlocks } : block;
+      }
+
       return block;
     }
 
@@ -251,6 +299,15 @@ function removeBlockById(blocks: EmailBlock[], blockId: string): { blocks: Email
 
       nextBlocks.push(columnsChanged ? { ...block, columns } : block);
       continue;
+    }
+
+    if (block.type === "group") {
+      const result = removeBlockById(block.blocks, blockId);
+      if (result.removed) {
+        removed = result.removed;
+        nextBlocks.push({ ...block, blocks: result.blocks });
+        continue;
+      }
     }
 
     nextBlocks.push(block);
@@ -308,9 +365,12 @@ export function EmailCampaignWorkspace({
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [draggingType, setDraggingType] = useState<EmailBlock["type"] | null>(null);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [draggingSavedBlockId, setDraggingSavedBlockId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [saveBlockDialogOpen, setSaveBlockDialogOpen] = useState(false);
+  const [pendingSavedBlock, setPendingSavedBlock] = useState<PendingSavedBlock | null>(null);
   const [scheduledAtInput, setScheduledAtInput] = useState(() => {
     const seed = initialScheduledAt ?? scheduledAt;
     return seed ? new Date(seed).toISOString().slice(0, 16) : "";
@@ -319,6 +379,9 @@ export function EmailCampaignWorkspace({
     initialCampaign?.recipientSelection ?? { type: "ALL" },
   );
   const emailCanvasRef = useRef<HTMLDivElement>(null);
+  const savedBlocksQuery = useSavedBlocks();
+  const createSavedBlockMutation = useCreateSavedBlock();
+  const deleteSavedBlockMutation = useDeleteSavedBlock();
   const initialDocument = useMemo(
     () =>
     initialCampaign
@@ -337,8 +400,13 @@ export function EmailCampaignWorkspace({
   const savedSnapshotRef = useRef(
     createDocumentSnapshot(initialDocument, initialCampaign?.recipientSelection ?? { type: "ALL" }),
   );
+  const savedBlocks = savedBlocksQuery.data?.items ?? [];
 
   const selectedBlock = selectedBlockId ? findBlockById(document.blocks, selectedBlockId) : null;
+  const draggingResolvedType =
+    draggingType ??
+    (draggingBlockId ? findBlockById(document.blocks, draggingBlockId)?.type ?? null : null) ??
+    (draggingSavedBlockId ? savedBlocks.find((entry) => entry.id === draggingSavedBlockId)?.block.type ?? null : null);
   const hasUnsavedChanges = createDocumentSnapshot(document, recipientSelection) !== savedSnapshotRef.current;
   const sendDisabledReason = !document.name.trim()
     ? "Campaign name is required"
@@ -392,6 +460,11 @@ export function EmailCampaignWorkspace({
   };
 
   const insertBlockAt = (index: number, blockType: EmailBlock["type"], parent: BlockParent = ROOT_PARENT) => {
+    if (blockType === "group" && parent.type === "group") {
+      toast.error("Nested groups are not supported yet");
+      return;
+    }
+
     const nextBlock = createEmailBlock(blockType);
 
     updateDocument((current) => {
@@ -402,6 +475,32 @@ export function EmailCampaignWorkspace({
     });
 
     setSelectedBlockId(nextBlock.id);
+  };
+
+  const insertSavedBlockAt = (index: number, block: EmailBlock, parent: BlockParent = ROOT_PARENT) => {
+    if (block.type === "group" && parent.type === "group") {
+      toast.error("Nested groups are not supported yet");
+      return;
+    }
+
+    const nextBlock = duplicateEmailBlock(block);
+
+    updateDocument((current) => ({
+      ...current,
+      blocks: insertBlockIntoParent(current.blocks, parent, index, nextBlock),
+    }));
+
+    setSelectedBlockId(nextBlock.id);
+  };
+
+  const deleteSavedBlock = async (savedBlockId: string) => {
+    try {
+      await deleteSavedBlockMutation.mutateAsync(savedBlockId);
+      toast.success("Saved block deleted");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete saved block";
+      toast.error("Delete failed", { description: message });
+    }
   };
 
   const moveBlock = (blockId: string, toIndex: number, targetParent: BlockParent = ROOT_PARENT) => {
@@ -422,7 +521,12 @@ export function EmailCampaignWorkspace({
         targetParent.type === "column" &&
         sourceLocation.parent.columnsBlockId === targetParent.columnsBlockId &&
         sourceLocation.parent.columnId === targetParent.columnId;
-      const adjustedIndex = (sameRootParent || sameColumnParent) && sourceLocation.index < toIndex ? toIndex - 1 : toIndex;
+      const sameGroupParent =
+        sourceLocation.parent.type === "group" &&
+        targetParent.type === "group" &&
+        sourceLocation.parent.groupBlockId === targetParent.groupBlockId;
+      const adjustedIndex =
+        (sameRootParent || sameColumnParent || sameGroupParent) && sourceLocation.index < toIndex ? toIndex - 1 : toIndex;
 
       return {
         ...current,
@@ -468,6 +572,75 @@ export function EmailCampaignWorkspace({
       ...current,
       blocks: updateBlockById(current.blocks, blockId, updater),
     }));
+  };
+
+  const saveSelectedBlock = () => {
+    if (!selectedBlock) {
+      return;
+    }
+
+    const defaultName = (() => {
+      switch (selectedBlock.type) {
+        case "text":
+          return selectedBlock.content.text.trim() || "Text block";
+        case "button":
+          return selectedBlock.label.text.trim() || "Button block";
+        case "image":
+          return selectedBlock.alt.trim() || "Image block";
+        case "divider":
+          return "Divider block";
+        case "spacer":
+          return "Spacer block";
+        case "columns":
+          return "Columns block";
+        case "group":
+          return "Grouped section";
+        case "header":
+          return selectedBlock.title.text.trim() || "Header block";
+        case "footer":
+          return selectedBlock.content.text.trim() || "Footer block";
+      }
+    })();
+
+    setPendingSavedBlock({
+      blockId: selectedBlock.id,
+      name: defaultName,
+    });
+    setSaveBlockDialogOpen(true);
+  };
+
+  const confirmSaveBlock = async () => {
+    if (!pendingSavedBlock) {
+      return;
+    }
+
+    const name = pendingSavedBlock.name.trim();
+    if (!name) {
+      toast.error("Saved block name is required");
+      return;
+    }
+
+    const latestBlock = findBlockById(document.blocks, pendingSavedBlock.blockId);
+    if (!latestBlock) {
+      toast.error("Selected block could not be found");
+      return;
+    }
+
+    const request: CreateSavedEmailBlockRequest = {
+      name,
+      block: duplicateEmailBlock(latestBlock),
+    };
+
+    try {
+      await createSavedBlockMutation.mutateAsync(request);
+      setActiveTab("saved");
+      setSaveBlockDialogOpen(false);
+      setPendingSavedBlock(null);
+      toast.success("Block saved");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save block";
+      toast.error("Save failed", { description: message });
+    }
   };
 
   const createCampaignPayload = (): CreateCampaignRequest => {
@@ -561,11 +734,22 @@ export function EmailCampaignWorkspace({
   const previewContent = useMemo(() => renderEmailDocumentToHtml(document), [document]);
   const handleDropBlock = (
     index: number,
-    payload: { type: "library"; blockType: EmailBlock["type"] } | { type: "block"; blockId: string },
+    payload:
+      | { type: "library"; blockType: EmailBlock["type"] }
+      | { type: "saved"; savedBlockId: string }
+      | { type: "block"; blockId: string },
     parent: BlockParent = ROOT_PARENT,
   ) => {
     if (payload.type === "library") {
       insertBlockAt(index, payload.blockType, parent);
+      return;
+    }
+
+    if (payload.type === "saved") {
+      const savedBlock = savedBlocks.find((entry) => entry.id === payload.savedBlockId);
+      if (savedBlock) {
+        insertSavedBlockAt(index, savedBlock.block, parent);
+      }
       return;
     }
 
@@ -605,8 +789,13 @@ export function EmailCampaignWorkspace({
 
                     if (blockType) {
                       handleDropBlock(0, { type: "library", blockType: blockType as EmailBlock["type"] }, parent);
-                    } else if (blockId) {
-                      handleDropBlock(0, { type: "block", blockId }, parent);
+                    } else {
+                      const savedBlockId = event.dataTransfer.getData("application/x-saved-email-block-id");
+                      if (savedBlockId) {
+                        handleDropBlock(0, { type: "saved", savedBlockId }, parent);
+                      } else if (blockId) {
+                        handleDropBlock(0, { type: "block", blockId }, parent);
+                      }
                     }
 
                     setDropIndex(null);
@@ -620,7 +809,17 @@ export function EmailCampaignWorkspace({
                       </p>
                     </div>
                     <div className="mx-auto">
-                      <BlockInsertControl onInsertBlock={(blockType) => insertBlockAt(0, blockType, parent)} />
+                      <BlockInsertControl
+                        onInsertBlock={(blockType) => insertBlockAt(0, blockType, parent)}
+                        onInsertSavedBlock={(savedBlockId) => {
+                          const savedBlock = savedBlocks.find((entry) => entry.id === savedBlockId);
+                          if (savedBlock) {
+                            insertSavedBlockAt(0, savedBlock.block, parent);
+                          }
+                        }}
+                        savedBlocks={savedBlocks}
+                        allowGroup={false}
+                      />
                     </div>
                   </div>
                 </div>
@@ -639,14 +838,16 @@ export function EmailCampaignWorkspace({
                     onMoveDown={() => moveBlock(nestedBlock.id, Math.min(column.blocks.length, nestedIndex + 2), parent)}
                     onDragStart={() => setDraggingBlockId(nestedBlock.id)}
                     onDragEnd={() => setDraggingBlockId(null)}
+                    onSaveBlock={saveSelectedBlock}
                     onUpdate={(updater) => updateBlock(nestedBlock.id, updater)}
                     renderNestedColumns={renderNestedColumns}
+                    renderGroupedBlocks={renderGroupedBlocks}
                   />
                   <CanvasDropZone
                     index={nestedIndex + 1}
-                    draggingType={draggingType}
-                    draggingBlockId={draggingBlockId}
+                    draggingResolvedType={draggingResolvedType}
                     dropIndex={dropIndex}
+                    savedBlocks={savedBlocks}
                     setDropIndex={setDropIndex}
                     onDropBlock={(dropAt, payload) => handleDropBlock(dropAt, payload, parent)}
                   />
@@ -658,6 +859,120 @@ export function EmailCampaignWorkspace({
       })}
     </div>
   );
+
+  const renderGroupedBlocks = (block: EmailGroupBlock) => {
+    const parent: BlockParent = {
+      type: "group",
+      groupBlockId: block.id,
+    };
+
+    return (
+      <div className="grid gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4" style={blockStylesToCss(block.styles)}>
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Grouped section</p>
+          <Badge variant="secondary">{block.blocks.length} blocks</Badge>
+        </div>
+
+        {block.blocks.length === 0 ? (
+          <div
+            className={cn(
+              "grid min-h-[140px] place-items-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center",
+              draggingResolvedType === "group" && "cursor-not-allowed",
+            )}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (draggingResolvedType === "group") {
+                event.dataTransfer.dropEffect = "none";
+                setDropIndex(null);
+                return;
+              }
+
+              setDropIndex(0);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (draggingResolvedType === "group") {
+                setDropIndex(null);
+                return;
+              }
+
+              const blockType = event.dataTransfer.getData("application/x-email-block-type");
+              const blockId = event.dataTransfer.getData("application/x-email-block-id");
+              const savedBlockId = event.dataTransfer.getData("application/x-saved-email-block-id");
+
+              if (blockType) {
+                handleDropBlock(0, { type: "library", blockType: blockType as EmailBlock["type"] }, parent);
+              } else if (savedBlockId) {
+                handleDropBlock(0, { type: "saved", savedBlockId }, parent);
+              } else if (blockId) {
+                handleDropBlock(0, { type: "block", blockId }, parent);
+              }
+
+              setDropIndex(null);
+            }}
+          >
+            <div className="grid gap-3">
+              <p className="text-sm text-muted-foreground">Add blocks into this grouped section.</p>
+              <div className="mx-auto">
+                <BlockInsertControl
+                  onInsertBlock={(blockType) => insertBlockAt(0, blockType, parent)}
+                  onInsertSavedBlock={(savedBlockId) => {
+                    const savedBlock = savedBlocks.find((entry) => entry.id === savedBlockId);
+                    if (savedBlock) {
+                      insertSavedBlockAt(0, savedBlock.block, parent);
+                    }
+                  }}
+                  savedBlocks={savedBlocks}
+                  allowGroup={false}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            <CanvasDropZone
+              index={0}
+              draggingResolvedType={draggingResolvedType}
+              dropIndex={dropIndex}
+              savedBlocks={savedBlocks}
+              setDropIndex={setDropIndex}
+              disallowGroup
+              onDropBlock={(index, payload) => handleDropBlock(index, payload, parent)}
+            />
+            {block.blocks.map((nestedBlock, nestedIndex) => (
+              <Fragment key={nestedBlock.id}>
+                <BlockCard
+                  block={nestedBlock}
+                  selected={nestedBlock.id === selectedBlockId}
+                  previewMode={previewMode}
+                  onSelect={() => selectBlock(nestedBlock.id)}
+                  onDuplicate={() => duplicateBlockAt(nestedBlock.id)}
+                  onDelete={() => deleteBlock(nestedBlock.id)}
+                  onMoveUp={() => moveBlock(nestedBlock.id, Math.max(0, nestedIndex - 1), parent)}
+                  onMoveDown={() => moveBlock(nestedBlock.id, Math.min(block.blocks.length, nestedIndex + 2), parent)}
+                  onDragStart={() => setDraggingBlockId(nestedBlock.id)}
+                  onDragEnd={() => setDraggingBlockId(null)}
+                  onSaveBlock={saveSelectedBlock}
+                  onUpdate={(updater) => updateBlock(nestedBlock.id, updater)}
+                  renderNestedColumns={renderNestedColumns}
+                  renderGroupedBlocks={renderGroupedBlocks}
+                />
+                <CanvasDropZone
+                  index={nestedIndex + 1}
+                  draggingResolvedType={draggingResolvedType}
+                  dropIndex={dropIndex}
+                  savedBlocks={savedBlocks}
+                  setDropIndex={setDropIndex}
+                  disallowGroup
+                  onDropBlock={(index, payload) => handleDropBlock(index, payload, parent)}
+                />
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -787,8 +1102,50 @@ export function EmailCampaignWorkspace({
                   ))}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
-                  Saved blocks will appear here later.
+                <div className="grid gap-3">
+                  {savedBlocks.length > 0 ? (
+                    savedBlocks.map((item) => (
+                      <div
+                        key={item.id}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData("application/x-saved-email-block-id", item.id);
+                          event.dataTransfer.effectAllowed = "copy";
+                          setDraggingSavedBlockId(item.id);
+                        }}
+                        onDragEnd={() => setDraggingSavedBlockId(null)}
+                        className="grid gap-1 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <button type="button" onClick={() => insertSavedBlockAt(document.blocks.length, item.block)} className="grid gap-1 text-left">
+                            <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Saved {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(item.savedAt))}
+                            </p>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="capitalize">
+                              {item.block.type}
+                            </Badge>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:text-red-700"
+                              onClick={() => deleteSavedBlock(item.id)}
+                              aria-label="Delete saved block"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
+                      Saved blocks will appear here after you save one from the canvas toolbar.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -824,9 +1181,12 @@ export function EmailCampaignWorkspace({
                         event.preventDefault();
                         const blockType = event.dataTransfer.getData("application/x-email-block-type");
                         const blockId = event.dataTransfer.getData("application/x-email-block-id");
+                        const savedBlockId = event.dataTransfer.getData("application/x-saved-email-block-id");
 
                         if (blockType) {
                           handleDropBlock(0, { type: "library", blockType: blockType as EmailBlock["type"] });
+                        } else if (savedBlockId) {
+                          handleDropBlock(0, { type: "saved", savedBlockId });
                         } else if (blockId) {
                           handleDropBlock(0, { type: "block", blockId });
                         }
@@ -844,6 +1204,13 @@ export function EmailCampaignWorkspace({
                           <div className="mx-auto">
                             <BlockInsertControl
                               onInsertBlock={(blockType) => insertBlockAt(0, blockType)}
+                              onInsertSavedBlock={(savedBlockId) => {
+                                const savedBlock = savedBlocks.find((entry) => entry.id === savedBlockId);
+                                if (savedBlock) {
+                                  insertSavedBlockAt(0, savedBlock.block);
+                                }
+                              }}
+                              savedBlocks={savedBlocks}
                             />
                           </div>
                         </div>
@@ -852,14 +1219,14 @@ export function EmailCampaignWorkspace({
 
                   <div className="grid gap-3">
                     {document.blocks.length > 0 ? (
-                      <CanvasDropZone
-                        index={0}
-                        draggingType={draggingType}
-                        draggingBlockId={draggingBlockId}
-                        dropIndex={dropIndex}
-                        setDropIndex={setDropIndex}
-                        onDropBlock={(index, payload) => handleDropBlock(index, payload)}
-                      />
+                        <CanvasDropZone
+                          index={0}
+                          draggingResolvedType={draggingResolvedType}
+                          dropIndex={dropIndex}
+                          savedBlocks={savedBlocks}
+                          setDropIndex={setDropIndex}
+                          onDropBlock={(index, payload) => handleDropBlock(index, payload)}
+                        />
                     ) : null}
                     {document.blocks.map((block, index) => (
                       <Fragment key={block.id}>
@@ -874,23 +1241,18 @@ export function EmailCampaignWorkspace({
                           onMoveDown={() => moveBlock(block.id, Math.min(document.blocks.length, index + 2))}
                           onDragStart={() => setDraggingBlockId(block.id)}
                           onDragEnd={() => setDraggingBlockId(null)}
+                          onSaveBlock={saveSelectedBlock}
                           onUpdate={(updater) => updateBlock(block.id, updater)}
                           renderNestedColumns={renderNestedColumns}
+                          renderGroupedBlocks={renderGroupedBlocks}
                         />
                         <CanvasDropZone
                           index={index + 1}
-                          draggingType={draggingType}
-                          draggingBlockId={draggingBlockId}
+                          draggingResolvedType={draggingResolvedType}
                           dropIndex={dropIndex}
+                          savedBlocks={savedBlocks}
                           setDropIndex={setDropIndex}
-                          onDropBlock={(dropAt, payload) => {
-                            if (payload.type === "library") {
-                              insertBlockAt(dropAt, payload.blockType);
-                              return;
-                            }
-
-                            moveBlock(payload.blockId, dropAt);
-                          }}
+                          onDropBlock={(dropAt, payload) => handleDropBlock(dropAt, payload)}
                         />
                       </Fragment>
                     ))}
@@ -930,7 +1292,7 @@ export function EmailCampaignWorkspace({
 
       {previewMode ? (
         <div className="fixed inset-0 z-40 bg-slate-950/40 p-6">
-          <div className="relative h-full overflow-hidden rounded-[28px] border border-slate-200 bg-[#f7f4ee] shadow-2xl">
+          <div className="relative h-full overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">Preview mode</p>
@@ -953,6 +1315,50 @@ export function EmailCampaignWorkspace({
           </div>
         </div>
       ) : null}
+      <Dialog
+        open={saveBlockDialogOpen}
+        onOpenChange={(open) => {
+          setSaveBlockDialogOpen(open);
+          if (!open) {
+            setPendingSavedBlock(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save block</DialogTitle>
+            <DialogDescription>Name this saved block so you can reuse it in other emails.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="grid gap-4">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-900">Block name</span>
+              <Input
+                value={pendingSavedBlock?.name ?? ""}
+                onChange={(event) =>
+                  setPendingSavedBlock((current) => (current ? { ...current, name: event.target.value } : current))
+                }
+                placeholder="Saved block name"
+                autoFocus
+              />
+            </label>
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSaveBlockDialogOpen(false);
+                  setPendingSavedBlock(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={confirmSaveBlock}>
+                Save block
+              </Button>
+            </div>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
       <Dialog open={exitDialogOpen} onOpenChange={setExitDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1049,18 +1455,33 @@ export function EmailCampaignWorkspace({
 
 type CanvasDropZoneProps = {
   index: number;
-  draggingType: EmailBlock["type"] | null;
-  draggingBlockId: string | null;
+  draggingResolvedType: EmailBlock["type"] | null;
   dropIndex: number | null;
+  savedBlocks: SavedEmailBlock[];
   setDropIndex: (index: number | null) => void;
-  onDropBlock: (index: number, payload: { type: "library"; blockType: EmailBlock["type"] } | { type: "block"; blockId: string }) => void;
+  disallowGroup?: boolean;
+  onDropBlock: (
+    index: number,
+    payload:
+      | { type: "library"; blockType: EmailBlock["type"] }
+      | { type: "saved"; savedBlockId: string }
+      | { type: "block"; blockId: string },
+  ) => void;
 };
 
 type BlockInsertControlProps = {
   onInsertBlock: (blockType: EmailBlock["type"]) => void;
+  onInsertSavedBlock?: (savedBlockId: string) => void;
+  savedBlocks?: SavedEmailBlock[];
+  allowGroup?: boolean;
 };
 
-function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
+function BlockInsertControl({
+  onInsertBlock,
+  onInsertSavedBlock,
+  savedBlocks = [],
+  allowGroup = true,
+}: BlockInsertControlProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -1068,15 +1489,27 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const filteredBlocks = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
+    const availableLibrary = allowGroup ? blockLibrary : blockLibrary.filter((item) => item.type !== "group");
+    const availableSavedBlocks = allowGroup ? savedBlocks : savedBlocks.filter((item) => item.block.type !== "group");
+
     if (!query) {
-      return blockLibrary;
+      return {
+        library: availableLibrary,
+        saved: [] as SavedEmailBlock[],
+      };
     }
 
-    return blockLibrary.filter((item) => {
+    const library = availableLibrary.filter((item) => {
       const haystack = `${item.label} ${item.description}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [searchValue]);
+    const saved = availableSavedBlocks.filter((item) => {
+      const haystack = `${item.name} ${item.block.type}`.toLowerCase();
+      return haystack.includes(query);
+    });
+
+    return { library, saved };
+  }, [allowGroup, savedBlocks, searchValue]);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -1092,14 +1525,15 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
 
       const rect = controlRef.current.getBoundingClientRect();
       const estimatedWidth = 288;
-      const estimatedHeight = 336;
+      const estimatedHeight = menuRef.current?.offsetHeight ?? 336;
       const left = Math.max(8, Math.min(rect.left + rect.width / 2 - estimatedWidth / 2, window.innerWidth - estimatedWidth - 8));
-      const top = rect.bottom + 8;
+      const preferredTop = rect.bottom + 8;
       const flippedTop = rect.top - estimatedHeight - 8;
+      const clampedTop = Math.max(8, Math.min(preferredTop, window.innerHeight - estimatedHeight - 8));
 
       setMenuPosition({
         left,
-        top: top + estimatedHeight > window.innerHeight && flippedTop > 8 ? flippedTop : top,
+        top: preferredTop + estimatedHeight > window.innerHeight && flippedTop > 8 ? flippedTop : clampedTop,
       });
     };
 
@@ -1123,7 +1557,7 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [menuOpen]);
+  }, [menuOpen, searchValue]);
 
   return (
     <div ref={controlRef} className="relative inline-flex">
@@ -1156,8 +1590,9 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
                 />
               </div>
               <div className="grid gap-1 pt-2">
-                {filteredBlocks.length ? (
-                  filteredBlocks.map((item) => {
+                {filteredBlocks.library.length || filteredBlocks.saved.length ? (
+                  <>
+                    {filteredBlocks.library.map((item) => {
                     const Icon = item.icon;
 
                     return (
@@ -1177,7 +1612,32 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
                         </div>
                       </button>
                     );
-                  })
+                    })}
+                    {searchValue.trim() && filteredBlocks.saved.length ? (
+                      <>
+                        <div className="px-3 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Saved blocks
+                        </div>
+                        {filteredBlocks.saved.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              onInsertSavedBlock?.(item.id);
+                              setMenuOpen(false);
+                            }}
+                            className="flex items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-slate-100"
+                          >
+                            <BookmarkPlus className="h-4 w-4 text-slate-600" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                              <p className="text-xs capitalize text-muted-foreground">{item.block.type}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+                  </>
                 ) : (
                   <div className="px-3 py-4 text-sm text-muted-foreground">No matching blocks.</div>
                 )}
@@ -1192,20 +1652,28 @@ function BlockInsertControl({ onInsertBlock }: BlockInsertControlProps) {
 
 function CanvasDropZone({
   index,
-  draggingType,
-  draggingBlockId,
+  draggingResolvedType,
   dropIndex,
+  savedBlocks,
   setDropIndex,
   onDropBlock,
+  disallowGroup = false,
 }: CanvasDropZoneProps) {
-  const active = draggingType !== null || draggingBlockId !== null;
+  const active = draggingResolvedType !== null;
   const highlighted = dropIndex === index;
+  const groupDropBlocked = disallowGroup && draggingResolvedType === "group";
 
   return (
     <div
-      className={cn("group relative transition-all", active ? "h-10" : "h-6")}
+      className={cn("group relative transition-all", active ? "h-10" : "h-6", groupDropBlocked && "cursor-not-allowed")}
       onDragOver={(event) => {
         event.preventDefault();
+        if (groupDropBlocked) {
+          event.dataTransfer.dropEffect = "none";
+          setDropIndex(null);
+          return;
+        }
+
         setDropIndex(index);
       }}
       onDragLeave={() => {
@@ -1217,9 +1685,17 @@ function CanvasDropZone({
         event.preventDefault();
         const blockType = event.dataTransfer.getData("application/x-email-block-type");
         const blockId = event.dataTransfer.getData("application/x-email-block-id");
+        const savedBlockId = event.dataTransfer.getData("application/x-saved-email-block-id");
+
+        if (groupDropBlocked) {
+          setDropIndex(null);
+          return;
+        }
 
         if (blockType) {
           onDropBlock(index, { type: "library", blockType: blockType as EmailBlock["type"] });
+        } else if (savedBlockId) {
+          onDropBlock(index, { type: "saved", savedBlockId });
         } else if (blockId) {
           onDropBlock(index, { type: "block", blockId });
         }
@@ -1230,11 +1706,21 @@ function CanvasDropZone({
       <div
         className={cn(
           "absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 transition",
-          highlighted ? "bg-sky-500" : active ? "bg-slate-200" : "bg-transparent group-hover:bg-slate-300",
+          groupDropBlocked
+            ? "bg-rose-300"
+            : highlighted
+              ? "bg-sky-500"
+              : active
+                ? "bg-slate-200"
+                : "bg-transparent group-hover:bg-slate-300",
         )}
       />
       <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-        <BlockInsertControl onInsertBlock={(blockType) => onDropBlock(index, { type: "library", blockType })} />
+        <BlockInsertControl
+          onInsertBlock={(blockType) => onDropBlock(index, { type: "library", blockType })}
+          onInsertSavedBlock={(savedBlockId) => onDropBlock(index, { type: "saved", savedBlockId })}
+          savedBlocks={savedBlocks}
+        />
       </div>
     </div>
   );
@@ -1251,8 +1737,10 @@ type BlockCardProps = {
   onMoveDown: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onSaveBlock: () => void;
   onUpdate: (updater: (block: EmailBlock) => EmailBlock) => void;
   renderNestedColumns?: (block: Extract<EmailBlock, { type: "columns" }>) => ReactNode;
+  renderGroupedBlocks?: (block: EmailGroupBlock) => ReactNode;
 };
 
 function BlockCard({
@@ -1266,8 +1754,10 @@ function BlockCard({
   onMoveDown,
   onDragStart,
   onDragEnd,
+  onSaveBlock,
   onUpdate,
   renderNestedColumns,
+  renderGroupedBlocks,
 }: BlockCardProps) {
   const blockLabel = useMemo(() => {
     switch (block.type) {
@@ -1287,6 +1777,8 @@ function BlockCard({
         return "Columns";
       case "footer":
         return "Footer";
+      case "group":
+        return "Group";
     }
   }, [block.type]);
 
@@ -1297,7 +1789,10 @@ function BlockCard({
         selected && "ring-2 ring-sky-500",
         previewMode && "shadow-none",
       )}
-      onClick={onSelect}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
     >
       {selected ? (
         <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
@@ -1346,6 +1841,16 @@ function BlockCard({
               type="button"
               size="icon"
               variant="ghost"
+              className="h-8 w-8"
+              onClick={onSaveBlock}
+              aria-label="Save block"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
               className="h-8 w-8 text-red-600 hover:text-red-700"
               onClick={onDelete}
               aria-label="Delete block"
@@ -1357,7 +1862,7 @@ function BlockCard({
       ) : null}
 
       <div className="grid gap-4 p-4">
-        {renderBlockPreview(block, previewMode, onUpdate, onSelect, renderNestedColumns)}
+        {renderBlockPreview(block, previewMode, onUpdate, onSelect, renderNestedColumns, renderGroupedBlocks)}
       </div>
     </Card>
   );
@@ -1369,22 +1874,26 @@ function renderBlockPreview(
   onUpdate: (updater: (block: EmailBlock) => EmailBlock) => void,
   onActivateBlock: () => void,
   renderNestedColumns?: (block: Extract<EmailBlock, { type: "columns" }>) => ReactNode,
+  renderGroupedBlocks?: (block: EmailGroupBlock) => ReactNode,
 ) {
   switch (block.type) {
     case "text":
       return (
-        <div style={blockStylesToCss(block.styles)}>
-                  <CampaignEmailEditor
-                    initialHtml={block.content.html}
-                    onChange={({ html, text }) => {
-                      onUpdate((current) => ({
-                        ...current,
-                        content: { html, text },
-                      }));
-                  }}
-                  disabled={previewMode}
-                  onActivate={onActivateBlock}
-                  />
+        <div style={blockStylesToCss(block.styles)} className="max-w-full">
+          <CampaignEmailEditor
+            initialHtml={block.content.html}
+            onChange={({ html, text }) => {
+              onUpdate((current) => ({
+                ...current,
+                content: { html, text },
+              }));
+            }}
+            disabled={previewMode}
+            onActivate={onActivateBlock}
+            minHeightClassName="min-h-0"
+            placeholder="Type here..."
+            contentClassName="w-full min-w-[160px]"
+          />
         </div>
       );
     case "header":
@@ -1438,22 +1947,34 @@ function renderBlockPreview(
       );
     case "button":
       return (
-        <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4" style={blockStylesToCss(block.styles)}>
+        <div style={{ ...blockStylesToCss(block.styles), textAlign: block.alignment }} className="w-full">
           <div
             className={cn(
-              "inline-flex rounded-full px-4 py-3 text-sm font-semibold text-white",
+              "inline-block rounded-full px-4 py-3 text-sm font-semibold text-white",
               !block.buttonBackgroundColor && "bg-slate-900",
-              !block.label.text && "text-white/70",
             )}
             style={{
               backgroundColor: block.buttonBackgroundColor ?? "#0f172a",
               color: block.buttonTextColor ?? "#ffffff",
-              justifySelf: block.alignment === "left" ? "start" : block.alignment === "right" ? "end" : "center",
+              textAlign: block.styles?.textAlign ?? "center",
             }}
           >
-            {block.label.text || "Add button text"}
+            <CampaignEmailEditor
+              initialHtml={block.label.html}
+              onChange={({ html, text }) => {
+                onUpdate((current) => ({
+                  ...current,
+                  label: { html, text },
+                }));
+              }}
+              disabled={previewMode}
+              onActivate={onActivateBlock}
+              minHeightClassName="min-h-0"
+              placeholder="Button"
+              contentClassName="min-w-[72px]"
+              placeholderClassName="text-white/70"
+            />
           </div>
-          <p className="text-sm text-slate-700">Link: {block.href || "Add a destination URL"}</p>
         </div>
       );
     case "spacer":
@@ -1468,6 +1989,8 @@ function renderBlockPreview(
           Columns are unavailable in this context.
         </div>
       );
+    case "group":
+      return renderGroupedBlocks ? renderGroupedBlocks(block) : null;
     case "footer":
       return (
         <div className="grid gap-3" style={blockStylesToCss(block.styles)}>
@@ -1641,7 +2164,7 @@ type BlockSettingsPanelProps = {
 
 function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
   const currentStyles = block.styles ?? {};
-  const supportsTypography = block.type === "text" || block.type === "header" || block.type === "button" || block.type === "footer";
+  const supportsTypography = block.type === "text" || block.type === "button";
   const fontWeight = currentStyles.fontWeight ?? "400";
   const textDecoration = currentStyles.textDecoration ?? "none";
   const isBold = Number(fontWeight) >= 600;
@@ -1673,12 +2196,12 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-900">Block styles</p>
-        <p className="mt-1 text-xs text-muted-foreground">Spacing and layout controls for the selected block.</p>
-      </div>
       {supportsTypography ? (
         <Card className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Typography</p>
+            <p className="text-xs text-muted-foreground">Text formatting and alignment.</p>
+          </div>
           <div className="grid gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <StyleToggleButton
@@ -1722,6 +2245,36 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
             </div>
             <p className="text-xs text-muted-foreground">Typography controls apply to the selected block.</p>
           </div>
+          {block.type === "text" ? (
+            <SelectField
+              label="Text style"
+              value={block.textStyle}
+              options={[
+                { label: "Paragraph", value: "p" },
+                { label: "Title", value: "h1" },
+                { label: "Subtitle", value: "h2" },
+                { label: "Section heading", value: "h3" },
+              ]}
+              onChange={(value) => {
+                const style = value as "p" | "h1" | "h2" | "h3";
+                const fontPresets: Record<string, { fontSize: string; fontWeight: string }> = {
+                  p: { fontSize: "16px", fontWeight: "400" },
+                  h1: { fontSize: "32px", fontWeight: "700" },
+                  h2: { fontSize: "24px", fontWeight: "600" },
+                  h3: { fontSize: "20px", fontWeight: "600" },
+                };
+                onUpdate((current) =>
+                  current.type === "text"
+                    ? {
+                        ...current,
+                        textStyle: style,
+                        styles: { ...current.styles, ...fontPresets[style] },
+                      }
+                    : current,
+                );
+              }}
+            />
+          ) : null}
           <SelectField
             label="Font family"
             value={currentStyles.fontFamily ?? "Arial, sans-serif"}
@@ -1797,9 +2350,63 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }))
             }
           />
+          <div className="grid gap-2">
+            <span className="text-sm font-medium text-slate-900">Text alignment</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <StyleToggleButton
+                active={(block.styles?.textAlign ?? "left") === "left"}
+                aria-label="Align left"
+                onClick={() =>
+                  onUpdate((current) => ({
+                    ...current,
+                    styles: {
+                      ...current.styles,
+                      textAlign: "left",
+                    },
+                  }))
+                }
+              >
+                <AlignLeft className="h-4 w-4" />
+              </StyleToggleButton>
+              <StyleToggleButton
+                active={block.styles?.textAlign === "center"}
+                aria-label="Align center"
+                onClick={() =>
+                  onUpdate((current) => ({
+                    ...current,
+                    styles: {
+                      ...current.styles,
+                      textAlign: "center",
+                    },
+                  }))
+                }
+              >
+                <AlignCenter className="h-4 w-4" />
+              </StyleToggleButton>
+              <StyleToggleButton
+                active={block.styles?.textAlign === "right"}
+                aria-label="Align right"
+                onClick={() =>
+                  onUpdate((current) => ({
+                    ...current,
+                    styles: {
+                      ...current.styles,
+                      textAlign: "right",
+                    },
+                  }))
+                }
+              >
+                <AlignRight className="h-4 w-4" />
+              </StyleToggleButton>
+            </div>
+          </div>
         </Card>
       ) : null}
       <Card className="grid gap-4 p-4">
+        <div className="grid gap-1">
+          <p className="text-sm font-semibold text-slate-900">Layout</p>
+          <p className="text-xs text-muted-foreground">Spacing and surface styling for this block.</p>
+        </div>
         <ColourInput
           label="Background colour"
           value={block.styles?.backgroundColor ?? "#ffffff"}
@@ -1853,29 +2460,14 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
             }
           />
         </div>
-        <SelectField
-          label="Text alignment"
-          value={block.styles?.textAlign ?? ""}
-          options={[
-            { label: "None", value: "" },
-            { label: "Left", value: "left" },
-            { label: "Center", value: "center" },
-            { label: "Right", value: "right" },
-          ]}
-          onChange={(value) =>
-            onUpdate((current) => ({
-              ...current,
-              styles: {
-                ...current.styles,
-                textAlign: value ? (value as "left" | "center" | "right") : undefined,
-              },
-            }))
-          }
-        />
       </Card>
 
       {block.type === "image" ? (
         <Card className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Image</p>
+            <p className="text-xs text-muted-foreground">Source and accessibility details.</p>
+          </div>
           <InputField
             label="Alt text"
             value={block.alt}
@@ -1901,16 +2493,10 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
 
       {block.type === "button" ? (
         <Card className="grid gap-4 p-4">
-          <InputField
-            label="Label"
-            value={block.label.text}
-            onChange={(value) =>
-              onUpdate((current) => ({
-                ...(current as EmailBlock & { label: EmailTextContent }),
-                label: { html: `<p>${escapeHtml(value)}</p>`, text: value },
-              }))
-            }
-          />
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Button</p>
+            <p className="text-xs text-muted-foreground">Placement and destination settings.</p>
+          </div>
           <InputField
             label="Destination URL"
             value={block.href}
@@ -1946,21 +2532,15 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }))
             }
           />
-          <ColourInput
-            label="Text colour"
-            value={block.buttonTextColor ?? ""}
-            onChange={(value) =>
-              onUpdate((current) => ({
-                ...current,
-                buttonTextColor: value || undefined,
-              }))
-            }
-          />
         </Card>
       ) : null}
 
       {block.type === "spacer" ? (
         <Card className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Spacer</p>
+            <p className="text-xs text-muted-foreground">Control the vertical gap size.</p>
+          </div>
           <NumberField
             label="Height"
             value={block.height}
@@ -1976,6 +2556,10 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
 
       {block.type === "divider" ? (
         <Card className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Divider</p>
+            <p className="text-xs text-muted-foreground">Adjust the line style and weight.</p>
+          </div>
           <ColourInput
             label="Divider colour"
             value={block.color ?? ""}
@@ -2001,6 +2585,10 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
 
       {block.type === "columns" ? (
         <Card className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold text-slate-900">Columns</p>
+            <p className="text-xs text-muted-foreground">Choose the column split for this section.</p>
+          </div>
           <SelectField
             label="Layout"
             value={block.layout}
@@ -2017,22 +2605,6 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
             }
           />
           <p className="text-xs text-muted-foreground">Use the inline editors in the canvas for each column.</p>
-        </Card>
-      ) : null}
-
-      {block.type === "header" ? (
-        <Card className="grid gap-4 p-4">
-          <InputField
-            label="Logo URL"
-            value={block.logoUrl ?? ""}
-            onChange={(value) =>
-              onUpdate((current) => ({
-                ...current,
-                logoUrl: value || null,
-              }))
-            }
-          />
-          <p className="text-xs text-muted-foreground">Edit title and subtitle directly in the canvas.</p>
         </Card>
       ) : null}
     </div>
@@ -2119,12 +2691,3 @@ function StyleToggleButton({ active, className, ...props }: StyleToggleButtonPro
 
 type EmailButtonAlignment = "left" | "center" | "right";
 type EmailColumnsLayout = "50-50" | "33-66" | "66-33";
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}

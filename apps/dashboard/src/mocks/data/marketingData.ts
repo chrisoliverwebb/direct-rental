@@ -3,10 +3,12 @@ import type {
   CampaignSummary,
   ContactDetail,
   ContactSummary,
+  CreateSavedEmailBlockRequest,
   CreateCampaignRequest,
   CreateContactRequest,
   CreateContactsRequest,
   MarketingDashboard,
+  SavedEmailBlock,
   SendCampaignRequest,
   ScheduledCampaignSummary,
   DraftCampaignDetail,
@@ -222,9 +224,27 @@ const seededTemplates: TemplateSummary[] = [
   },
 ];
 
+const STORAGE_KEY_DRAFTS = "mock:draftCampaigns";
+const STORAGE_KEY_BLOCKS = "mock:savedBlocks";
+
+function loadFromStorage<T>(key: string, fallback: T[]): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T[];
+  } catch {}
+  return fallback;
+}
+
+function persist(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 let contacts = [...seededContacts];
-let draftCampaigns = [...seededDraftCampaigns];
+let draftCampaigns = loadFromStorage<DraftCampaignDetail>(STORAGE_KEY_DRAFTS, seededDraftCampaigns);
 let campaigns = [...seededCampaigns];
+let savedBlocks = loadFromStorage<SavedEmailBlock>(STORAGE_KEY_BLOCKS, []);
 
 const toCampaignSummary = (campaign: LiveCampaign): CampaignSummary => ({
   id: campaign.id,
@@ -493,11 +513,13 @@ export const createCampaign = (request: CreateCampaignRequest) => {
   };
 
   draftCampaigns = [campaign, ...draftCampaigns];
+  persist(STORAGE_KEY_DRAFTS, draftCampaigns);
   return { id: campaign.id };
 };
 
 export const deleteCampaign = (campaignId: string) => {
   draftCampaigns = draftCampaigns.filter((c) => c.id !== campaignId);
+  persist(STORAGE_KEY_DRAFTS, draftCampaigns);
 };
 
 export const updateCampaign = (campaignId: string, request: CreateCampaignRequest) => {
@@ -510,6 +532,7 @@ export const updateCampaign = (campaignId: string, request: CreateCampaignReques
       : campaign,
   );
 
+  persist(STORAGE_KEY_DRAFTS, draftCampaigns);
   return { id: campaignId };
 };
 
@@ -526,6 +549,7 @@ export const sendCampaign = (campaignId: string, request: SendCampaignRequest) =
 
     draftCampaigns = draftCampaigns.filter((campaign) => campaign.id !== campaignId);
     campaigns = [nextCampaign, ...campaigns];
+    persist(STORAGE_KEY_DRAFTS, draftCampaigns);
 
     return {
       id: campaignId,
@@ -541,10 +565,37 @@ export const sendCampaign = (campaignId: string, request: SendCampaignRequest) =
   };
 };
 
+export const listSavedBlocks = () => ({
+  items: [...savedBlocks].sort((left, right) => right.savedAt.localeCompare(left.savedAt)),
+});
+
+export const createSavedBlock = (request: CreateSavedEmailBlockRequest) => {
+  const savedBlock: SavedEmailBlock = {
+    id: createId("saved_block", savedBlocks.length + 1),
+    name: request.name.trim(),
+    block: request.block,
+    savedAt: new Date().toISOString(),
+  };
+
+  savedBlocks = [savedBlock, ...savedBlocks];
+  persist(STORAGE_KEY_BLOCKS, savedBlocks);
+  return { id: savedBlock.id };
+};
+
+export const deleteSavedBlock = (savedBlockId: string) => {
+  savedBlocks = savedBlocks.filter((savedBlock) => savedBlock.id !== savedBlockId);
+  persist(STORAGE_KEY_BLOCKS, savedBlocks);
+};
+
 export const listTemplates = () => ({ items: seededTemplates });
 
 export const resetMarketingState = () => {
   contacts = [...seededContacts];
   draftCampaigns = [...seededDraftCampaigns];
   campaigns = [...seededCampaigns];
+  savedBlocks = [];
+  try {
+    localStorage.removeItem(STORAGE_KEY_DRAFTS);
+    localStorage.removeItem(STORAGE_KEY_BLOCKS);
+  } catch {}
 };

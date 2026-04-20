@@ -12,7 +12,7 @@ import {
 import type { CampaignSummary } from "@repo/api-contracts";
 import { campaignStatusLabel, channelLabel, recipientSelectionLabel } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, List, Plus } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, List, Mail, MessageSquare, Plus } from "lucide-react";
 import { DataTableColumnHeader } from "@/components/data-table/DataTableColumnHeader";
 import { DataTablePagination } from "@/components/data-table/DataTablePagination";
 import { ErrorState } from "@/components/feedback/ErrorState";
@@ -223,7 +223,13 @@ export function CampaignsPage() {
       <section className="grid gap-3">
         {campaignsQuery.data ? (
           <div className="overflow-hidden rounded-xl border bg-white">
-            <div className={viewMode === "calendar" ? "flex items-center gap-3 p-4" : "flex flex-wrap items-end gap-3 p-4"}>
+            <div
+              className={
+                viewMode === "calendar"
+                  ? "grid items-center gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
+                  : "flex flex-wrap items-end gap-3 p-4"
+              }
+            >
               {viewMode === "table" ? (
                 <>
                   <label className="grid gap-2">
@@ -268,7 +274,7 @@ export function CampaignsPage() {
                   >
                     Today
                   </Button>
-                  <div className="flex flex-1 items-center justify-center gap-1">
+                  <div className="flex items-center justify-center gap-1 justify-self-center">
                     <Button
                       type="button"
                       variant="ghost"
@@ -300,7 +306,9 @@ export function CampaignsPage() {
                   </div>
                 </>
               )}
-              <div className={`${viewMode === "table" ? "ml-auto" : ""} flex items-center gap-2 rounded-lg border border-slate-200 p-1`}>
+              <div
+                className={`${viewMode === "table" ? "ml-auto" : "justify-self-end"} flex items-center gap-2 rounded-lg border border-slate-200 p-1`}
+              >
                 <Button
                   type="button"
                   variant={viewMode === "table" ? "secondary" : "ghost"}
@@ -333,7 +341,10 @@ export function CampaignsPage() {
                       size="sm"
                       variant={isSelected ? "secondary" : "ghost"}
                       className="h-8 rounded-full px-3 text-xs"
-                      onClick={() => setCalendarMonth(candidate)}
+                      onClick={() => {
+                        setCalendarMonth(candidate);
+                        setPickerOpen(false);
+                      }}
                     >
                       {new Intl.DateTimeFormat("en-GB", { month: "short" }).format(candidate)}
                     </Button>
@@ -347,7 +358,10 @@ export function CampaignsPage() {
                       size="sm"
                       variant={year === calendarMonth.getFullYear() ? "secondary" : "ghost"}
                       className="h-8 rounded-full px-3 text-xs"
-                      onClick={() => setCalendarMonth(new Date(year, calendarMonth.getMonth(), 1))}
+                      onClick={() => {
+                        setCalendarMonth(new Date(year, calendarMonth.getMonth(), 1));
+                        setPickerOpen(false);
+                      }}
                     >
                       {year}
                     </Button>
@@ -556,7 +570,13 @@ function CampaignCalendarItem({ campaign }: { campaign: CampaignSummary }) {
         }`}
         aria-hidden="true"
       >
-        {isCompleted ? <Check className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
+        {isCompleted ? (
+          <Check className="h-3 w-3" />
+        ) : campaign.channel === "EMAIL" ? (
+          <Mail className="h-3 w-3" />
+        ) : (
+          <MessageSquare className="h-3 w-3" />
+        )}
       </span>
       <p className="truncate pr-5 font-medium text-slate-900">{campaign.name}</p>
       <p className="flex items-center gap-1 truncate text-slate-500">

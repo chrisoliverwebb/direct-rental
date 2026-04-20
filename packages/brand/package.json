@@ -1,0 +1,24 @@
+{
+  "name": "@repo/brand",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/react": "^19.2.2",
+    "eslint": "^9.39.1",
+    "react": "^19.1.1",
+    "typescript": "5.9.2"
+  }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Mail, Users, FileText, LogOut } from "lucide-react";
 import { getUserDisplayName } from "@repo/auth";
+import { DirectRentalLockup } from "@repo/brand";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogoutMutation } from "@/features/auth/hooks";
@@ -35,8 +36,10 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
       <aside className="border-b bg-white px-5 py-6 lg:fixed lg:inset-y-0 lg:left-0 lg:w-[260px] lg:border-b-0 lg:border-r">
         <div className="mx-auto lg:flex lg:h-full lg:flex-col">
           <div className="mb-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Direct Rental</p>
-            <h1 className="mt-2 text-xl font-semibold text-slate-900">Marketing dashboard</h1>
+            <DirectRentalLockup
+              titleClassName="text-xs text-primary"
+              className="items-start"
+            />
           </div>
           <nav className="grid gap-1">
             {navigation.map((item) => {

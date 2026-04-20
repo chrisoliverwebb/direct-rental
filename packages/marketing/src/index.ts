@@ -9,6 +9,7 @@ export const marketingKeys = {
   draftCampaigns: () => [...marketingKeys.all, "draft-campaigns"] as const,
   campaigns: (query: GetCampaignsQuery) => [...marketingKeys.all, "campaigns", query] as const,
   campaign: (campaignId: string) => [...marketingKeys.all, "campaign", campaignId] as const,
+  savedBlocks: () => [...marketingKeys.all, "saved-blocks"] as const,
   templates: () => [...marketingKeys.all, "templates"] as const,
 };
 

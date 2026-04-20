@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  CreateSavedEmailBlockRequest,
   CreateCampaignRequest,
   CreateContactRequest,
   CreateContactsRequest,
@@ -117,6 +118,34 @@ export const useDeleteCampaign = () => {
     mutationFn: (campaignId: string) => marketingApi.deleteCampaign(campaignId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
+    },
+  });
+};
+
+export const useSavedBlocks = () =>
+  useQuery({
+    queryKey: marketingKeys.savedBlocks(),
+    queryFn: () => marketingApi.getSavedBlocks(),
+  });
+
+export const useCreateSavedBlock = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: CreateSavedEmailBlockRequest) => marketingApi.createSavedBlock(request),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.savedBlocks() });
+    },
+  });
+};
+
+export const useDeleteSavedBlock = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (savedBlockId: string) => marketingApi.deleteSavedBlock(savedBlockId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.savedBlocks() });
     },
   });
 };

@@ -4,6 +4,7 @@ import {
   contactDetailSchema,
   contactImportResultSchema,
   contactListResponseSchema,
+  createSavedEmailBlockRequestSchema,
   createCampaignRequestSchema,
   createContactRequestSchema,
   createContactsRequestSchema,
@@ -12,6 +13,7 @@ import {
   getCampaignsQuerySchema,
   getContactsQuerySchema,
   marketingDashboardSchema,
+  savedEmailBlockListResponseSchema,
   sendCampaignRequestSchema,
   sendCampaignResponseSchema,
   templateListResponseSchema,
@@ -21,6 +23,7 @@ import {
   type ContactDetail,
   type ContactImportResult,
   type ContactSummary,
+  type CreateSavedEmailBlockRequest,
   type DraftCampaignSummary,
   type GetCampaignsQuery,
   type CreateCampaignRequest,
@@ -29,6 +32,7 @@ import {
   type CreateEntityResponse,
   type GetContactsQuery,
   type MarketingDashboard,
+  type SavedEmailBlockListResponse,
   type SendCampaignRequest,
   type SendCampaignResponse,
   type TemplateListResponse,
@@ -63,6 +67,9 @@ export interface MarketingApi {
   updateCampaign(campaignId: string, request: UpdateCampaignRequest): Promise<CreateEntityResponse>;
   sendCampaign(campaignId: string, request: SendCampaignRequest): Promise<SendCampaignResponse>;
   deleteCampaign(campaignId: string): Promise<void>;
+  getSavedBlocks(): Promise<SavedEmailBlockListResponse>;
+  createSavedBlock(request: CreateSavedEmailBlockRequest): Promise<CreateEntityResponse>;
+  deleteSavedBlock(savedBlockId: string): Promise<void>;
   getTemplates(): Promise<TemplateListResponse>;
 }
 
@@ -128,6 +135,18 @@ export const marketingApi: MarketingApi = {
     }),
   deleteCampaign: async (campaignId) =>
     fetcher<void>(`/v1/marketing/campaigns/${campaignId}`, { method: "DELETE" }),
+  getSavedBlocks: async () =>
+    fetcher<SavedEmailBlockListResponse>("/v1/marketing/saved-blocks", {
+      schema: savedEmailBlockListResponseSchema,
+    }),
+  createSavedBlock: async (request) =>
+    fetcher<CreateEntityResponse>("/v1/marketing/saved-blocks", {
+      method: "POST",
+      body: JSON.stringify(createSavedEmailBlockRequestSchema.parse(request)),
+      schema: createEntityResponseSchema,
+    }),
+  deleteSavedBlock: async (savedBlockId) =>
+    fetcher<void>(`/v1/marketing/saved-blocks/${savedBlockId}`, { method: "DELETE" }),
   getTemplates: async () =>
     fetcher<TemplateListResponse>("/v1/marketing/templates", {
       schema: templateListResponseSchema,

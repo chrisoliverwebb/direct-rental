@@ -12,6 +12,7 @@ import type {
   EmailSpacerBlock,
   EmailTextBlock,
   EmailTextContent,
+  EmailTextStyle,
 } from "@repo/api-contracts";
 
 type EmailBlockType = EmailBlock["type"];
@@ -31,6 +32,7 @@ export const createEmailBlock = (type: EmailBlockType): EmailBlock => {
       return {
         id: createBlockId("text"),
         type: "text",
+        textStyle: "p",
         styles: defaultTextStyles(),
         content: {
           html: "",
@@ -114,18 +116,83 @@ export const createEmailBlock = (type: EmailBlockType): EmailBlock => {
           text: "",
         },
       };
+    case "group":
+      return {
+        id: createBlockId("group"),
+        type: "group",
+        blocks: [],
+      };
   }
+
+  return assertNever(type);
 };
 
-export const duplicateEmailBlock = (block: EmailBlock): EmailBlock => ({
-  ...block,
-  id: createBlockId(block.type),
-  ...(block.type === "columns"
-    ? {
+export const duplicateEmailBlock = (block: EmailBlock): EmailBlock => {
+  switch (block.type) {
+    case "text":
+      return {
+        ...block,
+        id: createBlockId("text"),
+        textStyle: block.textStyle,
+        styles: block.styles ? { ...block.styles } : undefined,
+        content: { ...block.content },
+      };
+    case "image":
+      return {
+        ...block,
+        id: createBlockId("image"),
+        styles: block.styles ? { ...block.styles } : undefined,
+      };
+    case "button":
+      return {
+        ...block,
+        id: createBlockId("button"),
+        styles: block.styles ? { ...block.styles } : undefined,
+        label: { ...block.label },
+      };
+    case "divider":
+      return {
+        ...block,
+        id: createBlockId("divider"),
+        styles: block.styles ? { ...block.styles } : undefined,
+      };
+    case "spacer":
+      return {
+        ...block,
+        id: createBlockId("spacer"),
+        styles: block.styles ? { ...block.styles } : undefined,
+      };
+    case "columns":
+      return {
+        ...block,
+        id: createBlockId("columns"),
+        styles: block.styles ? { ...block.styles } : undefined,
         columns: block.columns.map((column: EmailColumn) => duplicateEmailColumn(column)),
-      }
-    : {}),
-});
+      };
+    case "group":
+      return {
+        ...block,
+        id: createBlockId("group"),
+        styles: block.styles ? { ...block.styles } : undefined,
+        blocks: block.blocks.map((child) => duplicateEmailBlock(child)),
+      };
+    case "header":
+      return {
+        ...block,
+        id: createBlockId("header"),
+        styles: block.styles ? { ...block.styles } : undefined,
+        title: { ...block.title },
+        subtitle: { ...block.subtitle },
+      };
+    case "footer":
+      return {
+        ...block,
+        id: createBlockId("footer"),
+        styles: block.styles ? { ...block.styles } : undefined,
+        content: { ...block.content },
+      };
+  }
+};
 
 export const renderEmailDocumentToHtml = (document: EmailDocument): string => {
   const body = renderEmailBlocksToHtml(document.blocks);
@@ -165,6 +232,7 @@ export const createEmailDocumentFromCampaignContent = (input: {
         {
           id: createBlockId("text"),
           type: "text",
+          textStyle: "p",
           styles: defaultTextStyles(),
           content: {
             html: `<p>${escapeHtml(input.contentText)}</p>`,
@@ -188,7 +256,7 @@ function renderBlockToHtml(block: EmailBlock): string {
 
   switch (block.type) {
     case "text":
-      return `<div style="${baseStyles}">${normalizeTextHtml(block.content.html, block.content.text)}</div>`;
+      return `<div style="${baseStyles}">${renderTextContent(block.content, block.textStyle)}</div>`;
     case "header":
       return `<div style="${baseStyles}">${block.logoUrl ? `<div style="margin-bottom:16px;"><img src="${escapeAttr(block.logoUrl)}" alt="" style="max-width:160px;height:auto;display:block;" /></div>` : ""}<div style="font-size:28px;font-weight:700;line-height:1.2;">${normalizeTextHtml(block.title.html, block.title.text)}</div><div style="margin-top:8px;color:#64748b;">${normalizeTextHtml(block.subtitle.html, block.subtitle.text)}</div></div>`;
     case "image":
@@ -203,7 +271,16 @@ function renderBlockToHtml(block: EmailBlock): string {
       return `<div style="${baseStyles}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td width="${columnWidthPercent(block.layout, "left")}%" valign="top" style="padding-right:12px;">${renderEmailBlocksToHtml(block.columns[0]?.blocks ?? [])}</td><td width="${columnWidthPercent(block.layout, "right")}%" valign="top" style="padding-left:12px;">${renderEmailBlocksToHtml(block.columns[1]?.blocks ?? [])}</td></tr></table></div>`;
     case "footer":
       return `<div style="${baseStyles}color:#64748b;font-size:12px;line-height:1.6;">${normalizeTextHtml(block.content.html, block.content.text)}</div>`;
+    case "group":
+      return `<div style="${baseStyles}">${renderEmailBlocksToHtml(block.blocks)}</div>`;
   }
+
+  return assertNever(block);
+}
+
+function renderTextContent(content: EmailTextContent, textStyle: EmailTextStyle) {
+  const html = normalizeTextHtml(content.html, content.text);
+  return wrapHtmlWithTextStyle(html, textStyle);
 }
 
 function renderBlockToText(block: EmailBlock): string {
@@ -224,7 +301,11 @@ function renderBlockToText(block: EmailBlock): string {
       return block.columns.map((column: EmailColumn) => renderEmailBlocksToText(column.blocks)).filter(Boolean).join(" ");
     case "footer":
       return block.content.text;
+    case "group":
+      return renderEmailBlocksToText(block.blocks);
   }
+
+  return assertNever(block);
 }
 
 function renderBlockStyles(styles: EmailBlock["styles"]) {
@@ -272,6 +353,16 @@ function normalizeTextHtml(html: string, text: string) {
   return `<p>${escapeHtml(text)}</p>`;
 }
 
+function wrapHtmlWithTextStyle(html: string, textStyle: EmailTextStyle) {
+  const trimmed = html.trim();
+  const match = trimmed.match(/^<\s*(p|h1|h2|h3)\b[^>]*>([\s\S]*)<\s*\/\s*\1\s*>$/i);
+  if (match?.[2] !== undefined) {
+    return `<${textStyle}>${match[2]}</${textStyle}>`;
+  }
+
+  return `<${textStyle}>${trimmed}</${textStyle}>`;
+}
+
 function defaultTextStyles() {
   return {
     fontFamily: "Arial, sans-serif",
@@ -299,6 +390,10 @@ function duplicateEmailColumn(column: EmailColumn): EmailColumn {
     id: createBlockId("column"),
     blocks: column.blocks.map((block: EmailBlock) => duplicateEmailBlock(block)),
   };
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled email editor case: ${String(value)}`);
 }
 
 function createBlockId(prefix: string) {

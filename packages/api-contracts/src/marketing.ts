@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createPaginatedResponseSchema, isoDateStringSchema } from "@repo/shared";
-import { emailDocumentSchema } from "./email-editor";
+import { emailBlockSchema, emailDocumentSchema } from "./email-editor";
 
 export const campaignStatusSchema = z.enum(["DRAFT", "SCHEDULED", "SENT"]);
 export const draftCampaignStatusSchema = z.literal("DRAFT");
@@ -313,6 +313,28 @@ export const templateListResponseSchema = z.object({
 });
 
 export type TemplateListResponse = z.infer<typeof templateListResponseSchema>;
+
+export const savedEmailBlockSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1),
+  block: emailBlockSchema,
+  savedAt: isoDateStringSchema,
+});
+
+export type SavedEmailBlock = z.infer<typeof savedEmailBlockSchema>;
+
+export const createSavedEmailBlockRequestSchema = z.object({
+  name: z.string().trim().min(1, "Saved block name is required"),
+  block: emailBlockSchema,
+});
+
+export type CreateSavedEmailBlockRequest = z.infer<typeof createSavedEmailBlockRequestSchema>;
+
+export const savedEmailBlockListResponseSchema = z.object({
+  items: z.array(savedEmailBlockSchema),
+});
+
+export type SavedEmailBlockListResponse = z.infer<typeof savedEmailBlockListResponseSchema>;
 
 export const contactListResponseSchema = createPaginatedResponseSchema(contactSummarySchema);
 export const campaignListResponseSchema = createPaginatedResponseSchema(campaignSummarySchema);
