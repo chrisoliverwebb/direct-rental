@@ -7,9 +7,11 @@ import type {
   CreateContactRequest,
   CreateContactsRequest,
   MarketingDashboard,
+  SendCampaignRequest,
   ScheduledCampaignSummary,
   DraftCampaignDetail,
   DraftCampaignSummary,
+  GetCampaignsQuery,
   TemplateSummary,
 } from "@repo/api-contracts";
 import { createContactRequestSchema } from "@repo/api-contracts";
@@ -85,7 +87,7 @@ const seededDraftCampaigns: DraftCampaignDetail[] = [
       "Offer returning guests first access to two open weekends.",
       "We have two late spring weekends available.",
     ),
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: null,
     sentAt: null,
     createdAt: atIso("2026-04-01T09:00:00Z"),
@@ -100,7 +102,7 @@ const seededDraftCampaigns: DraftCampaignDetail[] = [
     contentHtml: "<p>May bank holiday dates are available for past guests.</p>",
     contentText: "May bank holiday dates are available for past guests.",
     contentDocument: null,
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: null,
     sentAt: null,
     createdAt: atIso("2026-04-03T09:00:00Z"),
@@ -120,7 +122,7 @@ const seededDraftCampaigns: DraftCampaignDetail[] = [
       "Returning guest pricing for July stays.",
       "Come back this summer with a returning guest rate.",
     ),
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: null,
     sentAt: null,
     createdAt: atIso("2026-04-05T09:00:00Z"),
@@ -143,7 +145,7 @@ const seededCampaigns: LiveCampaign[] = [
       "Invite recent guests back for summer.",
       "Thanks for staying with us this Easter.",
     ),
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: null,
     sentAt: atIso("2026-03-30T08:00:00Z"),
     createdAt: atIso("2026-03-27T09:00:00Z"),
@@ -158,7 +160,7 @@ const seededCampaigns: LiveCampaign[] = [
     contentHtml: "<p>Last-minute weekend availability for past guests.</p>",
     contentText: "Last-minute weekend availability for past guests.",
     contentDocument: null,
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: null,
     sentAt: atIso("2026-03-21T13:00:00Z"),
     createdAt: atIso("2026-03-21T11:00:00Z"),
@@ -178,7 +180,7 @@ const seededCampaigns: LiveCampaign[] = [
       "Past guests can book before public release.",
       "June half-term is open for past guests first.",
     ),
-    recipientSelection: { type: "ALL_SUBSCRIBED" },
+    recipientSelection: { type: "ALL" },
     scheduledAt: atIso("2026-04-25T09:30:00Z"),
     sentAt: null,
     createdAt: atIso("2026-04-10T08:00:00Z"),
@@ -230,13 +232,26 @@ const toCampaignSummary = (campaign: LiveCampaign): CampaignSummary => ({
   status: campaign.status,
   channel: campaign.channel,
   subject: campaign.subject,
-  recipientCount: contacts.filter((contact) => contact.status === "SUBSCRIBED").length,
+  recipientCount: countRecipients(campaign.recipientSelection),
+  recipientSelection: campaign.recipientSelection,
   scheduledAt: campaign.scheduledAt,
   sentAt: campaign.sentAt,
   openRate: campaign.status === "SENT" ? 0.42 : null,
   clickRate: campaign.status === "SENT" ? 0.11 : null,
   createdAt: campaign.createdAt,
 });
+
+const countRecipients = (selection: CampaignDetail["recipientSelection"]) => {
+  if (selection.type === "ALL") {
+    return contacts.length;
+  }
+
+  if (selection.type === "CONTACTS") {
+    return selection.contactIds.length;
+  }
+
+  return selection.groupIds.length;
+};
 
 const toDraftCampaignSummary = (campaign: DraftCampaignDetail): DraftCampaignSummary => ({
   id: campaign.id,
@@ -433,13 +448,34 @@ export const listDraftCampaigns = () => ({
   totalPages: 1,
 });
 
-export const listCampaigns = () => ({
-  items: sortByCreatedAtDesc(campaigns).map(toCampaignSummary),
-  page: 1,
-  pageSize: campaigns.length,
-  totalItems: campaigns.length,
-  totalPages: 1,
-});
+export const listCampaigns = ({
+  page = 1,
+  pageSize = 10,
+  channel,
+  status,
+  sortDirection = "desc",
+}: GetCampaignsQuery = {}) => {
+  const filtered = campaigns
+    .filter((campaign) => (channel ? campaign.channel === channel : true))
+    .filter((campaign) => (status ? campaign.status === status : true))
+    .sort((left, right) => {
+      const leftDate = left.sentAt ?? left.scheduledAt ?? left.createdAt;
+      const rightDate = right.sentAt ?? right.scheduledAt ?? right.createdAt;
+      return sortDirection === "desc" ? rightDate.localeCompare(leftDate) : leftDate.localeCompare(rightDate);
+    })
+    .map(toCampaignSummary);
+
+  const start = (page - 1) * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+
+  return {
+    items,
+    page,
+    pageSize,
+    totalItems: filtered.length,
+    totalPages: Math.max(1, Math.ceil(filtered.length / pageSize)),
+  };
+};
 
 export const getCampaignById = (campaignId: string) =>
   draftCampaigns.find((campaign) => campaign.id === campaignId) ??
@@ -460,6 +496,10 @@ export const createCampaign = (request: CreateCampaignRequest) => {
   return { id: campaign.id };
 };
 
+export const deleteCampaign = (campaignId: string) => {
+  draftCampaigns = draftCampaigns.filter((c) => c.id !== campaignId);
+};
+
 export const updateCampaign = (campaignId: string, request: CreateCampaignRequest) => {
   draftCampaigns = draftCampaigns.map((campaign) =>
     campaign.id === campaignId
@@ -473,22 +513,32 @@ export const updateCampaign = (campaignId: string, request: CreateCampaignReques
   return { id: campaignId };
 };
 
-export const sendCampaign = (campaignId: string) => {
+export const sendCampaign = (campaignId: string, request: SendCampaignRequest) => {
   const draft = draftCampaigns.find((campaign) => campaign.id === campaignId);
 
   if (draft) {
-    const sentCampaign: LiveCampaign = {
+    const nextCampaign: LiveCampaign = {
       ...draft,
-      status: "SENT",
-      sentAt: new Date().toISOString(),
-      scheduledAt: null,
+      status: request.sendMode === "IMMEDIATE" ? "SENT" : "SCHEDULED",
+      sentAt: request.sendMode === "IMMEDIATE" ? new Date().toISOString() : null,
+      scheduledAt: request.sendMode === "SCHEDULED" ? request.scheduledAt ?? null : null,
     };
 
     draftCampaigns = draftCampaigns.filter((campaign) => campaign.id !== campaignId);
-    campaigns = [sentCampaign, ...campaigns];
+    campaigns = [nextCampaign, ...campaigns];
+
+    return {
+      id: campaignId,
+      status: nextCampaign.status,
+      scheduledAt: nextCampaign.scheduledAt,
+    };
   }
 
-  return { id: campaignId, status: "SENT" as const };
+  return {
+    id: campaignId,
+    status: request.sendMode === "IMMEDIATE" ? ("SENT" as const) : ("SCHEDULED" as const),
+    scheduledAt: request.sendMode === "SCHEDULED" ? request.scheduledAt ?? null : null,
+  };
 };
 
 export const listTemplates = () => ({ items: seededTemplates });

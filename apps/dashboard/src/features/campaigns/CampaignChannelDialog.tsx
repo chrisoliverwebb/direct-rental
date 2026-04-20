@@ -1,7 +1,9 @@
 "use client";
 
 import { Mail, MessageSquareText } from "lucide-react";
-import type { CreateCampaignRequest } from "@repo/api-contracts";
+import type { CreateCampaignRequest, DraftCampaignSummary } from "@repo/api-contracts";
+import { Button } from "@/components/ui/button";
+import { DraftsList } from "@/features/campaigns/DraftsList";
 import {
   Dialog,
   DialogBody,
@@ -17,12 +19,18 @@ type CampaignChannelDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectChannel: (channel: CampaignChannel) => void;
+  draftCampaigns?: DraftCampaignSummary[];
+  showDrafts?: boolean;
+  onViewAllDrafts?: () => void;
 };
 
 export function CampaignChannelDialog({
   open,
   onOpenChange,
   onSelectChannel,
+  draftCampaigns = [],
+  showDrafts = true,
+  onViewAllDrafts,
 }: CampaignChannelDialogProps) {
   const handleSelect = (channel: CampaignChannel) => {
     onSelectChannel(channel);
@@ -35,11 +43,18 @@ export function CampaignChannelDialog({
         <DialogHeader>
           <DialogTitle>Create campaign</DialogTitle>
           <DialogDescription>
-            Choose how you want to build this campaign. Email opens the block
-            editor. SMS opens a simple text composer.
+            Continue where you left off, or start a new email or SMS campaign.
           </DialogDescription>
         </DialogHeader>
-        <DialogBody className="grid gap-4 sm:grid-cols-2">
+        <DialogBody className="grid gap-6">
+          <div className="grid gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Create a new one</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Email opens the block editor. SMS opens a simple text composer.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
           <button
             type="button"
             className="group grid gap-3 rounded-xl border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
@@ -71,6 +86,31 @@ export function CampaignChannelDialog({
               </p>
             </div>
           </button>
+            </div>
+          </div>
+          {showDrafts && draftCampaigns.length > 0 ? (
+            <div className="grid gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Continue where you left off</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Resume one of your draft campaigns.</p>
+              </div>
+              <DraftsList drafts={draftCampaigns} limit={1} onNavigate={() => onOpenChange(false)} />
+              {onViewAllDrafts && draftCampaigns.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 w-full text-muted-foreground"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onViewAllDrafts();
+                  }}
+                >
+                  See all {draftCampaigns.length} drafts
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </DialogBody>
       </DialogContent>
     </Dialog>

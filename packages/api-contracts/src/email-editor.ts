@@ -114,6 +114,18 @@ export const emailFooterBlockSchema = emailBaseBlockSchema.extend({
 
 export type EmailFooterBlock = z.infer<typeof emailFooterBlockSchema>;
 
+export type EmailGroupBlock = {
+  id: string;
+  styles?: EmailBlockStyles;
+  type: "group";
+  blocks: EmailBlock[];
+};
+
+export const emailGroupBlockSchema = emailBaseBlockSchema.extend({
+  type: z.literal("group"),
+  blocks: z.array(z.lazy(() => emailBlockSchema)),
+}) as z.ZodType<EmailGroupBlock>;
+
 export type EmailBlock =
   | EmailTextBlock
   | EmailHeaderBlock
@@ -122,7 +134,8 @@ export type EmailBlock =
   | EmailSpacerBlock
   | EmailDividerBlock
   | EmailColumnsBlock
-  | EmailFooterBlock;
+  | EmailFooterBlock
+  | EmailGroupBlock;
 
 export const emailBlockSchema = z.discriminatedUnion("type", [
   emailTextBlockSchema,
@@ -133,6 +146,7 @@ export const emailBlockSchema = z.discriminatedUnion("type", [
   emailDividerBlockSchema,
   emailColumnsBlockSchema,
   emailFooterBlockSchema,
+  emailGroupBlockSchema,
   ] as any) as unknown as z.ZodType<EmailBlock>;
 
 export const emailDocumentSchema = z.object({

@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CampaignChannelDialog } from "@/features/campaigns/CampaignChannelDialog";
 import { CampaignForm } from "@/features/campaigns/CampaignForm";
 import { EmailCampaignWorkspace } from "@/features/campaigns/EmailCampaignWorkspace";
-import { useCreateCampaign } from "@/features/marketing/hooks";
+import { useCreateCampaign, useDraftCampaigns } from "@/features/marketing/hooks";
+import type { DraftCampaignSummary } from "@repo/api-contracts";
 
 export function NewCampaignPage() {
   const router = useRouter();
@@ -13,6 +14,9 @@ export function NewCampaignPage() {
   const createCampaignMutation = useCreateCampaign();
 
   const channel = normalizeChannel(searchParams.get("channel"));
+  const scheduledAt = searchParams.get("scheduledAt") ?? undefined;
+  const draftCampaignsQuery = useDraftCampaigns();
+  const defaultName = generateDefaultName(draftCampaignsQuery.data?.items ?? []);
 
   return (
     <div className="grid gap-6">
@@ -31,8 +35,10 @@ export function NewCampaignPage() {
       {channel === "EMAIL" ? (
         <EmailCampaignWorkspace
           mode="create"
+          scheduledAt={scheduledAt}
+          initialCampaign={{ name: defaultName }}
           onBack={() => router.push("/campaigns")}
-          submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save draft"}
+          submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
           onSave={async (values) => {
             const result = await createCampaignMutation.mutateAsync(values);
             return result.id;
@@ -55,11 +61,14 @@ export function NewCampaignPage() {
               <CampaignForm
                 forcedChannel="SMS"
                 showChannelField={false}
-                submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save draft"}
+                submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
                 disabled={createCampaignMutation.isPending}
                 onSubmit={async (values) => {
                   const result = await createCampaignMutation.mutateAsync(values);
-                  router.push(`/campaigns/${result.id}`);
+                  const dest = scheduledAt
+                    ? `/campaigns/${result.id}?scheduledAt=${scheduledAt}`
+                    : `/campaigns/${result.id}`;
+                  router.push(dest);
                 }}
               />
             </CardContent>
@@ -79,4 +88,13 @@ export function NewCampaignPage() {
 
 function normalizeChannel(value: string | null) {
   return value === "EMAIL" || value === "SMS" ? value : null;
+}
+
+function generateDefaultName(drafts: DraftCampaignSummary[]): string {
+  const base = "Untitled Campaign";
+  const names = new Set(drafts.map((d) => d.name));
+  if (!names.has(base)) return base;
+  let i = 1;
+  while (names.has(`${base} (${i})`)) i++;
+  return `${base} (${i})`;
 }

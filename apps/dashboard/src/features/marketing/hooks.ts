@@ -5,6 +5,7 @@ import type {
   CreateCampaignRequest,
   CreateContactRequest,
   CreateContactsRequest,
+  GetCampaignsQuery,
   GetContactsQuery,
   SendCampaignRequest,
   UpdateCampaignRequest,
@@ -58,10 +59,10 @@ export const useDraftCampaigns = () =>
     queryFn: () => marketingApi.getDraftCampaigns(),
   });
 
-export const useCampaigns = () =>
+export const useCampaigns = (query: GetCampaignsQuery) =>
   useQuery({
-    queryKey: marketingKeys.campaigns(),
-    queryFn: () => marketingApi.getCampaigns(),
+    queryKey: marketingKeys.campaigns(query),
+    queryFn: () => marketingApi.getCampaigns(query),
   });
 
 export const useCampaign = (campaignId: string) =>
@@ -76,7 +77,8 @@ export const useCreateCampaign = () => {
   return useMutation({
     mutationFn: (request: CreateCampaignRequest) => marketingApi.createCampaign(request),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: marketingKeys.campaigns() });
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
+      await queryClient.invalidateQueries({ queryKey: [...marketingKeys.all, "campaigns"] });
     },
   });
 };
@@ -88,7 +90,8 @@ export const useUpdateCampaign = (campaignId: string) => {
     mutationFn: (request: UpdateCampaignRequest) => marketingApi.updateCampaign(campaignId, request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.campaign(campaignId) });
-      await queryClient.invalidateQueries({ queryKey: marketingKeys.campaigns() });
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
+      await queryClient.invalidateQueries({ queryKey: [...marketingKeys.all, "campaigns"] });
     },
   });
 };
@@ -100,8 +103,20 @@ export const useSendCampaign = (campaignId: string) => {
     mutationFn: (request: SendCampaignRequest) => marketingApi.sendCampaign(campaignId, request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.campaign(campaignId) });
-      await queryClient.invalidateQueries({ queryKey: marketingKeys.campaigns() });
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
+      await queryClient.invalidateQueries({ queryKey: [...marketingKeys.all, "campaigns"] });
       await queryClient.invalidateQueries({ queryKey: marketingKeys.dashboard() });
+    },
+  });
+};
+
+export const useDeleteCampaign = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (campaignId: string) => marketingApi.deleteCampaign(campaignId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
     },
   });
 };

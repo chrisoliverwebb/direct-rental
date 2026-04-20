@@ -3,11 +3,14 @@ import {
   createCampaignRequestSchema,
   createContactRequestSchema,
   createContactsRequestSchema,
+  getCampaignsQuerySchema,
   getContactsQuerySchema,
+  sendCampaignRequestSchema,
 } from "@repo/api-contracts";
 import {
   createCampaign,
   createContact,
+  deleteCampaign,
   getCampaignById,
   getContactById,
   getDashboard,
@@ -52,7 +55,18 @@ export const marketingHandlers = [
     const body = createContactsRequestSchema.parse(await request.json());
     return HttpResponse.json(importContacts(body.contacts));
   }),
-  http.get("*/api/v1/marketing/campaigns", async () => HttpResponse.json(listCampaigns())),
+  http.get("*/api/v1/marketing/campaigns", async ({ request }) => {
+    const url = new URL(request.url);
+    const query = getCampaignsQuerySchema.parse({
+      page: url.searchParams.get("page") ? Number(url.searchParams.get("page")) : undefined,
+      pageSize: url.searchParams.get("pageSize") ? Number(url.searchParams.get("pageSize")) : undefined,
+      channel: url.searchParams.get("channel") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      sortDirection: url.searchParams.get("sortDirection") ?? undefined,
+    });
+
+    return HttpResponse.json(listCampaigns(query));
+  }),
   http.get("*/api/v1/marketing/campaigns/drafts", async () => HttpResponse.json(listDraftCampaigns())),
   http.get("*/api/v1/marketing/campaigns/:campaignId", async ({ params }) => {
     const campaign = getCampaignById(String(params.campaignId));
@@ -71,8 +85,14 @@ export const marketingHandlers = [
     const body = createCampaignRequestSchema.parse(await request.json());
     return HttpResponse.json(updateCampaign(String(params.campaignId), body));
   }),
-  http.post("*/api/v1/marketing/campaigns/:campaignId/send", async ({ params }) =>
-    HttpResponse.json(sendCampaign(String(params.campaignId)))),
+  http.post("*/api/v1/marketing/campaigns/:campaignId/send", async ({ params, request }) => {
+    const body = sendCampaignRequestSchema.parse(await request.json());
+    return HttpResponse.json(sendCampaign(String(params.campaignId), body));
+  }),
+  http.delete("*/api/v1/marketing/campaigns/:campaignId", ({ params }) => {
+    deleteCampaign(String(params.campaignId));
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.get("*/api/v1/marketing/templates", async () => HttpResponse.json(listTemplates())),
 ];
 

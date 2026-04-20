@@ -42,7 +42,7 @@ export function CampaignForm({
       contentHtml: defaultValues?.contentHtml ?? "",
       contentText: defaultValues?.contentText ?? "",
       recipientSelection: defaultValues?.recipientSelection ?? {
-        type: "ALL_SUBSCRIBED",
+        type: "ALL",
       },
     },
   });

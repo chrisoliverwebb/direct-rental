@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --workspace @repo/dashboard run check-types)"
+    ]
+  }
+}

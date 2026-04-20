@@ -18,7 +18,6 @@ import {
   ArrowDown,
   ArrowUp,
   Bold,
-  ChevronLeft,
   Copy,
   Eye,
   EyeOff,
@@ -46,6 +45,7 @@ import {
   type EmailColumn,
   type EmailDocument,
   type EmailTextContent,
+  type SendCampaignRequest,
 } from "@repo/api-contracts";
 import {
   createEmptyEmailDocument,
@@ -54,24 +54,37 @@ import {
   duplicateEmailBlock,
   renderEmailDocumentToHtml,
   renderEmailDocumentToText,
-  resolveEmailDocumentTitle,
 } from "@repo/marketing";
+import { BackButton } from "@/components/navigation/BackButton";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ColourInput } from "@/components/ui/colour-input";
 import { CampaignEmailEditor } from "@/features/campaigns/CampaignEmailEditor";
+import { EmailCampaignPreview } from "@/features/campaigns/EmailCampaignPreview";
 import { cn } from "@/lib/utils";
 
 type EmailCampaignWorkspaceProps = {
   mode: "create" | "edit";
   onBack: () => void;
   onSave: (request: CreateCampaignRequest) => Promise<string>;
-  onSendNow?: () => Promise<void>;
+  onSend?: (request: SendCampaignRequest) => Promise<void>;
   submitLabel: string;
   initialCampaign?: Partial<CampaignDetail>;
   autoFocusTitle?: boolean;
+  scheduledAt?: string;
+  campaignStatus?: "DRAFT" | "SCHEDULED";
+  initialScheduledAt?: string;
 };
 
 type BlockLibraryItem = {
@@ -263,16 +276,34 @@ function readImageFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function createDocumentSnapshot(
+  document: EmailDocument,
+  recipientSelection: CreateCampaignRequest["recipientSelection"] = { type: "ALL" },
+) {
+  return JSON.stringify({
+    name: document.name,
+    subject: document.subject,
+    previewText: document.previewText,
+    blocks: document.blocks,
+    recipientSelection,
+  });
+}
+
 export function EmailCampaignWorkspace({
   mode,
   onBack,
   onSave,
-  onSendNow,
+  onSend,
   submitLabel,
   initialCampaign,
+  scheduledAt,
+  campaignStatus = "DRAFT",
+  initialScheduledAt,
 }: EmailCampaignWorkspaceProps) {
   const router = useRouter();
   const [previewMode, setPreviewMode] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"content" | "saved">("content");
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [draggingType, setDraggingType] = useState<EmailBlock["type"] | null>(null);
@@ -280,8 +311,16 @@ export function EmailCampaignWorkspace({
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [scheduledAtInput, setScheduledAtInput] = useState(() => {
+    const seed = initialScheduledAt ?? scheduledAt;
+    return seed ? new Date(seed).toISOString().slice(0, 16) : "";
+  });
+  const [recipientSelection, setRecipientSelection] = useState<CreateCampaignRequest["recipientSelection"]>(
+    initialCampaign?.recipientSelection ?? { type: "ALL" },
+  );
   const emailCanvasRef = useRef<HTMLDivElement>(null);
-  const [document, setDocument] = useState<EmailDocument>(() =>
+  const initialDocument = useMemo(
+    () =>
     initialCampaign
       ? createEmailDocumentFromCampaignContent({
           id: initialCampaign.id,
@@ -292,9 +331,22 @@ export function EmailCampaignWorkspace({
           contentText: initialCampaign.contentText ?? "",
         })
       : createEmptyEmailDocument(),
+    [initialCampaign],
+  );
+  const [document, setDocument] = useState<EmailDocument>(initialDocument);
+  const savedSnapshotRef = useRef(
+    createDocumentSnapshot(initialDocument, initialCampaign?.recipientSelection ?? { type: "ALL" }),
   );
 
   const selectedBlock = selectedBlockId ? findBlockById(document.blocks, selectedBlockId) : null;
+  const hasUnsavedChanges = createDocumentSnapshot(document, recipientSelection) !== savedSnapshotRef.current;
+  const sendDisabledReason = !document.name.trim()
+    ? "Campaign name is required"
+    : !document.subject.trim()
+      ? "Subject is required to send"
+      : hasUnsavedChanges
+        ? "Save your changes before sending"
+        : null;
   const selectBlock = (blockId: string) => {
     setSelectedBlockId(blockId);
   };
@@ -314,6 +366,29 @@ export function EmailCampaignWorkspace({
 
   const updateField = (field: "name" | "subject" | "previewText", value: string) => {
     updateDocument((current) => ({ ...current, [field]: value }));
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const handleAttemptExit = () => {
+    if (!hasUnsavedChanges) {
+      onBack();
+      return;
+    }
+
+    setExitDialogOpen(true);
   };
 
   const insertBlockAt = (index: number, blockType: EmailBlock["type"], parent: BlockParent = ROOT_PARENT) => {
@@ -407,13 +482,16 @@ export function EmailCampaignWorkspace({
       contentHtml,
       contentText,
       contentDocument: document,
-      recipientSelection: {
-        type: "ALL_SUBSCRIBED",
-      },
+      recipientSelection,
     });
   };
 
   const handleSave = async () => {
+    if (!document.name.trim()) {
+      toast.error("Campaign name is required");
+      return;
+    }
+
     if (!document.blocks.length) {
       toast.error("Add at least one block before saving");
       return;
@@ -422,10 +500,14 @@ export function EmailCampaignWorkspace({
     try {
       setIsSaving(true);
       const payload = createCampaignPayload();
-      const id = await onSave(payload);
+      const campaignId = await onSave(payload);
+      savedSnapshotRef.current = createDocumentSnapshot(document, recipientSelection);
       toast.success(mode === "create" ? "Campaign draft saved" : "Campaign updated");
       if (mode === "create") {
-        router.push(`/campaigns/${id}`);
+        const dest = scheduledAt
+          ? `/campaigns/${campaignId}/edit?scheduledAt=${scheduledAt}`
+          : "/campaigns";
+        router.push(dest);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save campaign";
@@ -436,17 +518,41 @@ export function EmailCampaignWorkspace({
   };
 
   const handleSend = async () => {
-    if (!onSendNow) {
+    if (!onSend) {
       return;
     }
 
     try {
       setIsSending(true);
-      await onSendNow();
+      await onSend({ sendMode: "IMMEDIATE" });
+      setSendDialogOpen(false);
       toast.success("Campaign sent");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to send campaign";
       toast.error("Send failed", { description: message });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (!onSend) {
+      return;
+    }
+
+    if (!scheduledAtInput) {
+      toast.error("Choose a scheduled send time");
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      await onSend({ sendMode: "SCHEDULED", scheduledAt: new Date(scheduledAtInput).toISOString() });
+      setSendDialogOpen(false);
+      toast.success("Campaign scheduled");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to schedule campaign";
+      toast.error("Schedule failed", { description: message });
     } finally {
       setIsSending(false);
     }
@@ -554,72 +660,82 @@ export function EmailCampaignWorkspace({
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {mode === "create" ? "Create email" : "Edit email"}
-            </p>
-            <Input
-              value={document.name}
-              onChange={(event) => updateField("name", event.target.value)}
-              placeholder="Campaign name"
-              className="mt-1 h-10 max-w-xl text-base font-medium"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            {mode === "edit" ? <Badge variant="secondary">Draft</Badge> : null}
-            <Button
-              type="button"
-              variant={previewMode ? "secondary" : "outline"}
-              onClick={() => setPreviewMode((current) => !current)}
-            >
-              {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-              {previewMode ? "Editing" : "Preview"}
-            </Button>
-            {onSendNow ? (
-              <Button type="button" variant="secondary" onClick={handleSend} disabled={isSending}>
-                <Send className="mr-2 h-4 w-4" />
-                {isSending ? "Sending..." : "Send now"}
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <header className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <BackButton onClick={handleAttemptExit} label="Back" iconOnly />
+            <div className="min-w-0 flex-1">
+              <Input
+                value={document.name}
+                onChange={(event) => updateField("name", event.target.value)}
+                placeholder="Campaign name"
+                className="h-auto max-w-xl border-transparent bg-transparent p-0 text-base font-medium shadow-none focus-visible:border-input focus-visible:bg-background focus-visible:px-3 focus-visible:py-2"
+              />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              {mode === "edit" ? (
+                <Badge variant={campaignStatus === "SCHEDULED" ? "warning" : "secondary"}>
+                  {campaignStatus === "SCHEDULED" ? "Scheduled" : "Draft"}
+                </Badge>
+              ) : null}
+              <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
+                {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+              </Badge>
+              <Button type="button" onClick={handleSave} disabled={isSaving || !hasUnsavedChanges}>
+                <Save className="mr-2 h-4 w-4" />
+                {isSaving ? "Saving..." : submitLabel}
               </Button>
-            ) : null}
-            <Button type="button" onClick={handleSave} disabled={isSaving}>
-              <Save className="mr-2 h-4 w-4" />
-              {isSaving ? "Saving..." : submitLabel}
-            </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={previewMode ? "secondary" : "outline"}
+                onClick={() => setPreviewMode((current) => !current)}
+              >
+                {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                {previewMode ? "Editing" : "Preview"}
+              </Button>
+              <span title={sendDisabledReason ?? undefined}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSendDialogOpen(true)}
+                  disabled={!onSend || !!sendDisabledReason || isSending}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {isSending ? "Sending..." : campaignStatus === "SCHEDULED" ? "Edit Schedule" : "Send / Schedule"}
+                </Button>
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="grid gap-3 border-t border-slate-200 px-4 py-3 lg:grid-cols-2">
-          <div className="grid gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Subject
-            </label>
-            <Input
-              value={document.subject}
-              onChange={(event) => updateField("subject", event.target.value)}
-              placeholder="Campaign subject"
-            />
+          <div className="grid gap-3 border-t border-slate-200 px-4 py-3 lg:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Subject
+              </label>
+              <Input
+                value={document.subject}
+                onChange={(event) => updateField("subject", event.target.value)}
+                placeholder="Campaign subject"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Preview text
+              </label>
+              <Input
+                value={document.previewText}
+                onChange={(event) => updateField("previewText", event.target.value)}
+                placeholder="Preview text"
+              />
+            </div>
           </div>
-          <div className="grid gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Preview text
-            </label>
-            <Input
-              value={document.previewText}
-              onChange={(event) => updateField("previewText", event.target.value)}
-              placeholder="Preview text"
-            />
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="grid flex-1 gap-0 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)_340px]">
-        <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
-          <div className="sticky top-[132px] flex h-[calc(100vh-132px)] flex-col overflow-hidden">
+        <div className="grid h-full min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)_340px]">
+        <aside className="min-h-0 overflow-hidden border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <div className="border-b px-4 py-3">
               <div className="flex items-center gap-2">
                 <Button
@@ -640,7 +756,7 @@ export function EmailCampaignWorkspace({
                 </Button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
               {activeTab === "content" ? (
                 <div className="grid gap-3">
                   {blockLibrary.map((item) => (
@@ -679,16 +795,13 @@ export function EmailCampaignWorkspace({
           </div>
         </aside>
 
-        <main className="overflow-hidden bg-slate-100" onPointerDownCapture={clearSelectedBlockIfOutsideCanvas}>
-          <div className="flex h-[calc(100vh-132px)] flex-col overflow-y-auto px-4 py-6">
+        <main className="min-h-0 overflow-hidden bg-slate-100" onPointerDownCapture={clearSelectedBlockIfOutsideCanvas}>
+          <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-6">
             <div className="mx-auto w-full max-w-[640px]">
               <div ref={emailCanvasRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b px-5 py-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {resolveEmailDocumentTitle(document)}
-                      </p>
                       <p className="text-xs text-muted-foreground">
                         {previewMode
                           ? "Preview mode"
@@ -788,15 +901,15 @@ export function EmailCampaignWorkspace({
           </div>
         </main>
 
-        <aside className="border-t border-slate-200 bg-white lg:border-l lg:border-t-0">
-          <div className="sticky top-[132px] flex h-[calc(100vh-132px)] flex-col overflow-hidden">
+        <aside className="min-h-0 overflow-hidden border-t border-slate-200 bg-white lg:border-l lg:border-t-0">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <div className="border-b px-4 py-3">
               <p className="text-sm font-semibold text-slate-900">Settings</p>
               <p className="text-xs text-muted-foreground">
                 {selectedBlock ? `Editing ${selectedBlock.type} block` : "Select a block to edit its settings"}
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
               {selectedBlock ? (
                 <BlockSettingsPanel
                   block={selectedBlock}
@@ -806,7 +919,7 @@ export function EmailCampaignWorkspace({
                 <div className="grid gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
                   <p>No block selected.</p>
                   <p>
-                    Choose a block from the canvas to adjust spacing, colors, links, and layout.
+                    Choose a block from the canvas to adjust spacing, colours, links, and layout.
                   </p>
                 </div>
               )}
@@ -816,8 +929,8 @@ export function EmailCampaignWorkspace({
       </div>
 
       {previewMode ? (
-        <div className="fixed inset-0 z-40 bg-slate-950/30 p-6">
-          <div className="relative h-full rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-40 bg-slate-950/40 p-6">
+          <div className="relative h-full overflow-hidden rounded-[28px] border border-slate-200 bg-[#f7f4ee] shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">Preview mode</p>
@@ -828,14 +941,108 @@ export function EmailCampaignWorkspace({
                 Close preview
               </Button>
             </div>
-            <div className="h-[calc(100%-57px)] overflow-y-auto bg-slate-100 p-6">
-              <div className="mx-auto max-w-[600px]">
-                <div className="rounded-2xl bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: previewContent }} />
-              </div>
+            <div className="h-[calc(100%-57px)] min-h-0 overflow-hidden">
+              <EmailCampaignPreview
+                documentId={document.id}
+                subject={document.subject}
+                previewText={document.previewText}
+                contentHtml={previewContent}
+                showMailboxChrome
+              />
             </div>
           </div>
         </div>
       ) : null}
+      <Dialog open={exitDialogOpen} onOpenChange={setExitDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Discard unsaved changes?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes in this email. Leave now and your latest edits will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="flex items-center justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setExitDialogOpen(false)}>
+              Keep editing
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setExitDialogOpen(false);
+                onBack();
+              }}
+            >
+              Leave editor
+            </Button>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send campaign</DialogTitle>
+            <DialogDescription>
+              Choose whether to send this campaign immediately or schedule it for later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="grid gap-4">
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-slate-900">Who</span>
+              <select
+                value={recipientSelection.type}
+                onChange={() => setRecipientSelection({ type: "ALL" })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="ALL">All contacts</option>
+              </select>
+            </label>
+            <div className="grid gap-3 rounded-xl border border-slate-200 p-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {campaignStatus === "SCHEDULED" ? "Edit schedule" : "Schedule"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {campaignStatus === "SCHEDULED"
+                    ? "Update the scheduled send time for this campaign."
+                    : "Pick a future time and this campaign will move into scheduled campaigns."}
+                </p>
+              </div>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-900">Scheduled for</span>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAtInput}
+                  onChange={(event) => setScheduledAtInput(event.target.value)}
+                />
+              </label>
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={handleSchedule} disabled={isSending || !scheduledAtInput}>
+                  {campaignStatus === "SCHEDULED" ? "Update schedule" : "Schedule"}
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 rounded-xl border border-slate-200 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {campaignStatus === "SCHEDULED" ? "Send now instead" : "Send now"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {campaignStatus === "SCHEDULED"
+                      ? "Deliver this campaign to your audience immediately and remove it from the schedule."
+                      : "Deliver this campaign to subscribed contacts immediately."}
+                  </p>
+                </div>
+                <Button type="button" onClick={handleSend} disabled={isSending} className="shrink-0 whitespace-nowrap">
+                  {isSending ? "Sending..." : campaignStatus === "SCHEDULED" ? "Send now instead" : "Send now"}
+                </Button>
+              </div>
+            </div>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+      </div>
     </div>
   );
 }
@@ -1580,21 +1787,21 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }))
             }
           />
-          <ColorField
-            label="Font color"
+          <ColourInput
+            label="Font colour"
             value={currentStyles.textColor ?? "#111827"}
             onChange={(value) =>
               updateStyles((styles) => ({
                 ...styles,
-                textColor: value,
+                textColor: value ?? "#111827",
               }))
             }
           />
         </Card>
       ) : null}
       <Card className="grid gap-4 p-4">
-        <ColorField
-          label="Background"
+        <ColourInput
+          label="Background colour"
           value={block.styles?.backgroundColor ?? "#ffffff"}
           allowNone
           onChange={(value) =>
@@ -1729,8 +1936,8 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }))
             }
           />
-          <InputField
-            label="Background"
+          <ColourInput
+            label="Background colour"
             value={block.buttonBackgroundColor ?? ""}
             onChange={(value) =>
               onUpdate((current) => ({
@@ -1739,8 +1946,8 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }))
             }
           />
-          <InputField
-            label="Text color"
+          <ColourInput
+            label="Text colour"
             value={block.buttonTextColor ?? ""}
             onChange={(value) =>
               onUpdate((current) => ({
@@ -1769,8 +1976,8 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
 
       {block.type === "divider" ? (
         <Card className="grid gap-4 p-4">
-          <InputField
-            label="Color"
+          <ColourInput
+            label="Divider colour"
             value={block.color ?? ""}
             onChange={(value) =>
               onUpdate((current) => ({
@@ -1844,32 +2051,6 @@ function InputField({ label, value, onChange, placeholder = "None" }: InputField
     <label className="grid gap-2">
       <span className="text-sm font-medium text-slate-900">{label}</span>
       <Input value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
-    </label>
-  );
-}
-
-type ColorFieldProps = InputFieldProps & {
-  allowNone?: boolean;
-};
-
-function ColorField({ label, value, onChange, allowNone = false }: ColorFieldProps) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-sm font-medium text-slate-900">{label}</span>
-      <div className="flex flex-wrap items-center gap-3">
-        {allowNone ? (
-          <Button type="button" variant={value === "" ? "secondary" : "outline"} onClick={() => onChange("")}>
-            None
-          </Button>
-        ) : null}
-        <Input
-          type="color"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-14 cursor-pointer p-1"
-        />
-        <span className="font-mono text-sm text-muted-foreground">{value}</span>
-      </div>
     </label>
   );
 }

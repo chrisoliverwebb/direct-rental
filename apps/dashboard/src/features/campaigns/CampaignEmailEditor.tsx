@@ -43,6 +43,7 @@ export function CampaignEmailEditor({
   onActivate,
 }: CampaignEmailEditorProps) {
   const initialStateRef = useRef<string>(initialHtml);
+  const skipInitialSyncRef = useRef(Boolean(initialHtml.trim()));
 
   return (
     <LexicalComposer
@@ -78,6 +79,11 @@ export function CampaignEmailEditor({
       <HistoryPlugin />
       <OnChangePlugin
         onChange={(editorState, editor) => {
+          if (skipInitialSyncRef.current) {
+            skipInitialSyncRef.current = false;
+            return;
+          }
+
           editorState.read(() => {
             const text = $getRoot().getTextContent().trim();
             const html = text ? $generateHtmlFromNodes(editor, null) : "";

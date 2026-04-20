@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronLeft, Info, Mail, Phone } from "lucide-react";
+import { Info, Mail, Phone } from "lucide-react";
 import { contactSourceLabel, contactStatusLabel } from "@repo/marketing";
 import { formatDate, formatDateTime } from "@repo/shared";
+import { BackButton } from "@/components/navigation/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/feedback/ErrorState";
@@ -30,13 +30,7 @@ export function ContactDetailPage({ contactId }: { contactId: string }) {
   return (
     <div className="grid gap-6">
       <div>
-        <Link
-          href="/contacts"
-          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition hover:text-slate-900"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to contacts
-        </Link>
+        <BackButton href="/contacts" label="Back to contacts" />
         <div className="mt-2 flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-slate-900">
             {contact.firstName} {contact.lastName}

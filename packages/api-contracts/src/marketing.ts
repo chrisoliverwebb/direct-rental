@@ -12,6 +12,22 @@ export const contactSourceSchema = z.enum([
   "DIRECT_BOOKING",
 ]);
 
+export const campaignRecipientSelectionSchema = z.union([
+  z.object({
+    type: z.literal("ALL"),
+  }),
+  z.object({
+    type: z.literal("CONTACTS"),
+    contactIds: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    type: z.literal("GROUPS"),
+    groupIds: z.array(z.string().min(1)).min(1),
+  }),
+]);
+
+export type CampaignRecipientSelection = z.infer<typeof campaignRecipientSelectionSchema>;
+
 export const campaignSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -19,6 +35,7 @@ export const campaignSummarySchema = z.object({
   channel: campaignChannelSchema,
   subject: z.string().nullable(),
   recipientCount: z.number().int().min(0),
+  recipientSelection: campaignRecipientSelectionSchema,
   scheduledAt: isoDateStringSchema.nullable(),
   sentAt: isoDateStringSchema.nullable(),
   openRate: z.number().min(0).max(1).nullable(),
@@ -89,6 +106,16 @@ export const getContactsQuerySchema = z.object({
 });
 
 export type GetContactsQuery = z.infer<typeof getContactsQuerySchema>;
+
+export const getCampaignsQuerySchema = z.object({
+  page: z.number().int().min(1).optional(),
+  pageSize: z.number().int().min(1).max(100).optional(),
+  channel: campaignChannelSchema.optional(),
+  status: publishedCampaignStatusSchema.optional(),
+  sortDirection: z.enum(["asc", "desc"]).optional(),
+});
+
+export type GetCampaignsQuery = z.infer<typeof getCampaignsQuerySchema>;
 
 export const contactConsentSchema = z.object({
   emailMarketing: z.boolean(),
@@ -190,9 +217,7 @@ const draftCampaignDetailSchema = z.object({
   contentHtml: z.string().min(1),
   contentText: z.string().min(1),
   contentDocument: emailDocumentSchema.nullable().optional(),
-  recipientSelection: z.object({
-    type: z.literal("ALL_SUBSCRIBED"),
-  }),
+  recipientSelection: campaignRecipientSelectionSchema,
   scheduledAt: isoDateStringSchema.nullable(),
   sentAt: isoDateStringSchema.nullable(),
   createdAt: isoDateStringSchema,
@@ -210,9 +235,7 @@ const publishedCampaignDetailSchema = z.object({
   contentHtml: z.string().min(1),
   contentText: z.string().min(1),
   contentDocument: emailDocumentSchema.nullable().optional(),
-  recipientSelection: z.object({
-    type: z.literal("ALL_SUBSCRIBED"),
-  }),
+  recipientSelection: campaignRecipientSelectionSchema,
   scheduledAt: isoDateStringSchema.nullable(),
   sentAt: isoDateStringSchema.nullable(),
   createdAt: isoDateStringSchema,
@@ -231,9 +254,7 @@ export const createCampaignRequestSchema = z
     contentHtml: z.string().trim().min(1, "HTML content is required"),
     contentText: z.string().trim().min(1, "Plain text content is required"),
     contentDocument: emailDocumentSchema.nullable().optional(),
-    recipientSelection: z.object({
-      type: z.literal("ALL_SUBSCRIBED"),
-    }),
+    recipientSelection: campaignRecipientSelectionSchema,
   })
   .superRefine((value, ctx) => {
     if (value.channel === "EMAIL" && !value.subject?.trim()) {
@@ -251,15 +272,27 @@ export const updateCampaignRequestSchema = createCampaignRequestSchema;
 
 export type UpdateCampaignRequest = z.infer<typeof updateCampaignRequestSchema>;
 
-export const sendCampaignRequestSchema = z.object({
-  sendMode: z.literal("IMMEDIATE"),
-});
+export const sendCampaignRequestSchema = z
+  .object({
+    sendMode: z.enum(["IMMEDIATE", "SCHEDULED"]),
+    scheduledAt: isoDateStringSchema.nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.sendMode === "SCHEDULED" && !value.scheduledAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["scheduledAt"],
+        message: "Choose a scheduled send time",
+      });
+    }
+  });
 
 export type SendCampaignRequest = z.infer<typeof sendCampaignRequestSchema>;
 
 export const sendCampaignResponseSchema = z.object({
   id: z.string(),
-  status: z.literal("SENT"),
+  status: z.enum(["SENT", "SCHEDULED"]),
+  scheduledAt: isoDateStringSchema.nullable().optional(),
 });
 
 export type SendCampaignResponse = z.infer<typeof sendCampaignResponseSchema>;

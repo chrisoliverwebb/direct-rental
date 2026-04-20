@@ -6,6 +6,7 @@ import type {
   EmailDividerBlock,
   EmailDocument,
   EmailFooterBlock,
+  EmailGroupBlock,
   EmailHeaderBlock,
   EmailImageBlock,
   EmailSpacerBlock,

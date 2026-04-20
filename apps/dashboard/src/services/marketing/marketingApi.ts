@@ -9,6 +9,7 @@ import {
   createContactsRequestSchema,
   createEntityResponseSchema,
   draftCampaignListResponseSchema,
+  getCampaignsQuerySchema,
   getContactsQuerySchema,
   marketingDashboardSchema,
   sendCampaignRequestSchema,
@@ -21,6 +22,7 @@ import {
   type ContactImportResult,
   type ContactSummary,
   type DraftCampaignSummary,
+  type GetCampaignsQuery,
   type CreateCampaignRequest,
   type CreateContactRequest,
   type CreateContactsRequest,
@@ -55,11 +57,12 @@ export interface MarketingApi {
   createContact(request: CreateContactRequest): Promise<CreateEntityResponse>;
   importContacts(request: CreateContactsRequest): Promise<ContactImportResult>;
   getDraftCampaigns(): Promise<PaginatedResponse<DraftCampaignSummary>>;
-  getCampaigns(): Promise<PaginatedResponse<CampaignSummary>>;
+  getCampaigns(query: GetCampaignsQuery): Promise<PaginatedResponse<CampaignSummary>>;
   getCampaign(campaignId: string): Promise<CampaignDetail>;
   createCampaign(request: CreateCampaignRequest): Promise<CreateEntityResponse>;
   updateCampaign(campaignId: string, request: UpdateCampaignRequest): Promise<CreateEntityResponse>;
   sendCampaign(campaignId: string, request: SendCampaignRequest): Promise<SendCampaignResponse>;
+  deleteCampaign(campaignId: string): Promise<void>;
   getTemplates(): Promise<TemplateListResponse>;
 }
 
@@ -95,10 +98,12 @@ export const marketingApi: MarketingApi = {
     fetcher<PaginatedResponse<DraftCampaignSummary>>("/v1/marketing/campaigns/drafts", {
       schema: draftCampaignListResponseSchema,
     }),
-  getCampaigns: async () =>
-    fetcher<PaginatedResponse<CampaignSummary>>("/v1/marketing/campaigns", {
+  getCampaigns: async (query) => {
+    const parsed = getCampaignsQuerySchema.parse(query);
+    return fetcher<PaginatedResponse<CampaignSummary>>(`/v1/marketing/campaigns${buildQueryString(parsed)}`, {
       schema: campaignListResponseSchema,
-    }),
+    });
+  },
   getCampaign: async (campaignId) =>
     fetcher<CampaignDetail>(`/v1/marketing/campaigns/${campaignId}`, {
       schema: campaignDetailSchema,
@@ -121,6 +126,8 @@ export const marketingApi: MarketingApi = {
       body: JSON.stringify(sendCampaignRequestSchema.parse(request)),
       schema: sendCampaignResponseSchema,
     }),
+  deleteCampaign: async (campaignId) =>
+    fetcher<void>(`/v1/marketing/campaigns/${campaignId}`, { method: "DELETE" }),
   getTemplates: async () =>
     fetcher<TemplateListResponse>("/v1/marketing/templates", {
       schema: templateListResponseSchema,

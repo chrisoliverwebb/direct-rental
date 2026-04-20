@@ -10,7 +10,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const currentUserQuery = useCurrentUser();
-  const compactShell = pathname === "/campaigns/new" || /^\/campaigns\/[^/]+$/.test(pathname);
+  const compactShell = pathname === "/campaigns/new" || /^\/campaigns\/[^/]+\/edit$/.test(pathname);
 
   useEffect(() => {
     if (!currentUserQuery.isLoading && !currentUserQuery.data) {
