@@ -197,7 +197,7 @@ export const duplicateEmailBlock = (block: EmailBlock): EmailBlock => {
 export const renderEmailDocumentToHtml = (document: EmailDocument): string => {
   const body = renderEmailBlocksToHtml(document.blocks);
 
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;"><div style="max-width:600px;margin:0 auto;padding:24px;background:#ffffff;">${body}</div></body></html>`;
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;"><div style="max-width:600px;margin:0 auto;padding:0;background:#ffffff;">${body}</div></body></html>`;
 };
 
 export const renderEmailDocumentToText = (document: EmailDocument): string => renderEmailBlocksToText(document.blocks);
@@ -371,6 +371,10 @@ function defaultTextStyles() {
     lineHeight: "1.5",
     fontStyle: "normal",
     textDecoration: "none",
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingLeft: 24,
+    paddingRight: 24,
   };
 }
 

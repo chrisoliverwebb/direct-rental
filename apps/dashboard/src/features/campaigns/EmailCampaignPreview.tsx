@@ -90,14 +90,14 @@ export function EmailCampaignPreview({
 
   if (!showMailboxChrome) {
     return (
-      <div className="mx-auto flex min-h-full max-w-[860px] flex-col rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
+      <div className="mx-auto flex min-h-full max-w-[860px] flex-col rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded bg-slate-900 text-xs font-semibold text-white">
               DR
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold text-slate-950">{subject || "Campaign subject preview"}</p>
+              <p className="truncate text-base font-semibold text-slate-900">{subject || "Campaign subject preview"}</p>
               <p className="text-sm text-slate-500">
                 {senderName} &lt;{senderEmail}&gt;
               </p>
@@ -107,12 +107,12 @@ export function EmailCampaignPreview({
             </div>
           </div>
           {previewText ? (
-            <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-500">{previewText}</p>
+            <p className="mt-3 border-l-2 border-slate-200 pl-3 text-sm text-slate-500">{previewText}</p>
           ) : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_14%)] p-4 lg:p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4 lg:p-8">
           <div
-            className="mx-auto max-w-[600px] rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70"
+            className="mx-auto max-w-[600px] border border-slate-200 bg-white"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
         </div>
@@ -121,86 +121,84 @@ export function EmailCampaignPreview({
   }
 
   return (
-    <div className="grid h-full min-h-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,_#f8fafc,_#eef2f7_58%,_#e2e8f0)] lg:grid-cols-[280px_minmax(0,1fr)]">
-      <div className="hidden min-h-0 border-r border-slate-200/80 bg-white/65 backdrop-blur lg:flex lg:flex-col">
-        <div className="border-b border-slate-200/80 p-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm">
-            <Search className="h-4 w-4" />
+    <div className="grid h-full min-h-0 overflow-hidden border-t bg-slate-50 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="hidden min-h-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+        <div className="border-b border-slate-200 p-3">
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400">
+            <Search className="h-3.5 w-3.5" />
             Search mail
           </div>
         </div>
-        <div className="border-b border-slate-200/80 px-3 py-3">
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm">
+        <div className="border-b border-slate-200 px-2 py-2">
+          <div className="grid gap-0.5">
+            <div className="flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white">
               <Inbox className="h-4 w-4" />
               Inbox
-              <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-xs">
+              <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-xs tabular-nums">
                 {previewMailbox.inboxItems.filter((item) => item.unread).length} new
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-600 transition hover:bg-white/70">
+            <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
               <Send className="h-4 w-4" />
               Sent
             </div>
-            <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-600 transition hover:bg-white/70">
+            <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
               <PanelBottom className="h-4 w-4" />
               Drafts
             </div>
-            <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm text-slate-600 transition hover:bg-white/70">
+            <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
               <Trash2 className="h-4 w-4" />
               Bin
             </div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3">
-          <div className="grid gap-2 overflow-x-hidden">
-            {previewMailbox.inboxItems.map((item, index) => (
-              <div
-                key={item.id}
-                className={cn(
-                  "min-w-0 overflow-hidden rounded-2xl border p-3 shadow-sm transition",
-                  index === 0
-                    ? "border-sky-200 bg-sky-50/90"
-                    : item.unread
-                      ? "border-slate-200 bg-white"
-                      : "border-transparent bg-white/55",
-                )}
-              >
-                <div className="flex min-w-0 items-start gap-3">
-                  <div className="mt-1 h-10 w-10 rounded-full bg-slate-900 text-center text-sm font-semibold leading-10 text-white">
-                    {item.senderName
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className={cn("truncate text-sm text-slate-900", item.unread && "font-semibold")}>
-                        {index === 0 ? senderName : item.senderName}
-                      </p>
-                      {item.unread ? (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
-                          New
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className={cn("mt-1 truncate text-sm text-slate-900", item.unread && "font-medium")}>
-                      {index === 0 ? subject || item.subject : item.subject}
+        <div className="min-h-0 flex-1 divide-y overflow-y-auto">
+          {previewMailbox.inboxItems.map((item, index) => (
+            <div
+              key={item.id}
+              className={cn(
+                "min-w-0 overflow-hidden p-3 transition-colors",
+                index === 0
+                  ? "border-l-2 border-l-primary bg-primary/5"
+                  : item.unread
+                    ? "bg-white"
+                    : "bg-white/70",
+              )}
+            >
+              <div className="flex min-w-0 items-start gap-2.5">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded bg-slate-700 text-[11px] font-semibold text-white">
+                  {item.senderName
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className={cn("truncate text-sm text-slate-900", item.unread && "font-semibold")}>
+                      {index === 0 ? senderName : item.senderName}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">
-                      {index === 0 ? previewText || item.previewText : item.previewText}
-                    </p>
+                    {item.unread ? (
+                      <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        New
+                      </span>
+                    ) : null}
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <p className="text-[11px] text-slate-400">{index === 0 ? previewMailbox.previewTimestamp : item.timestamp}</p>
-                    {item.starred ? <Star className="h-4 w-4 text-sky-500" /> : <div className="h-4 w-4" />}
-                  </div>
+                  <p className={cn("mt-0.5 truncate text-sm text-slate-700", item.unread && "font-medium")}>
+                    {index === 0 ? subject || item.subject : item.subject}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-slate-400">
+                    {index === 0 ? previewText || item.previewText : item.previewText}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <p className="text-[10px] text-slate-400">{index === 0 ? previewMailbox.previewTimestamp : item.timestamp}</p>
+                  {item.starred ? <Star className="h-3.5 w-3.5 text-amber-400" /> : <div className="h-3.5 w-3.5" />}
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
       <div className="min-h-0 overflow-y-auto p-4 lg:p-6">

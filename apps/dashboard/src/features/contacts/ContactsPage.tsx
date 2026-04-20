@@ -102,7 +102,7 @@ export function ContactsPage() {
         />
       ) : null}
       {contactsQuery.data && contactsQuery.data.items.length > 0 ? (
-        <div className="rounded-xl border bg-white">
+        <div className="rounded-lg border bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -117,7 +117,7 @@ export function ContactsPage() {
                       <button
                         type="button"
                         aria-label="Marketing consent guidance"
-                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                        className="rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                       >
                         <Info className="h-3.5 w-3.5" />
                       </button>

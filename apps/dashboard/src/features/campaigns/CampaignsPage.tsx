@@ -222,7 +222,7 @@ export function CampaignsPage() {
 
       <section className="grid gap-3">
         {campaignsQuery.data ? (
-          <div className="overflow-hidden rounded-xl border bg-white">
+          <div className="overflow-hidden rounded-lg border bg-white">
             <div
               className={
                 viewMode === "calendar"
@@ -269,7 +269,7 @@ export function CampaignsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-8 shrink-0 rounded-full px-3 text-xs font-medium"
+                    className="h-8 shrink-0 rounded-md px-3 text-xs font-medium"
                     onClick={() => setCalendarMonth(startOfMonth(new Date()))}
                   >
                     Today
@@ -279,7 +279,7 @@ export function CampaignsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-full"
+                      className="h-8 w-8 rounded-md"
                       onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
                       aria-label="Previous month"
                     >
@@ -288,7 +288,7 @@ export function CampaignsPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-8 rounded-full px-3 text-sm font-medium text-slate-900"
+                      className="h-8 rounded-md px-3 text-sm font-medium text-slate-900"
                       onClick={() => setPickerOpen((open) => !open)}
                     >
                       {new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(calendarMonth)}
@@ -297,7 +297,7 @@ export function CampaignsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-full"
+                      className="h-8 w-8 rounded-md"
                       onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
                       aria-label="Next month"
                     >
@@ -340,7 +340,7 @@ export function CampaignsPage() {
                       type="button"
                       size="sm"
                       variant={isSelected ? "secondary" : "ghost"}
-                      className="h-8 rounded-full px-3 text-xs"
+                      className="h-8 rounded-md px-3 text-xs"
                       onClick={() => {
                         setCalendarMonth(candidate);
                         setPickerOpen(false);
@@ -357,7 +357,7 @@ export function CampaignsPage() {
                       type="button"
                       size="sm"
                       variant={year === calendarMonth.getFullYear() ? "secondary" : "ghost"}
-                      className="h-8 rounded-full px-3 text-xs"
+                      className="h-8 rounded-md px-3 text-xs"
                       onClick={() => {
                         setCalendarMonth(new Date(year, calendarMonth.getMonth(), 1));
                         setPickerOpen(false);
@@ -373,7 +373,7 @@ export function CampaignsPage() {
         ) : null}
 
         {campaignsQuery.data ? (
-          <div className="rounded-xl border bg-white">
+          <div className="rounded-lg border bg-white">
             {viewMode === "table" ? (
               <Table>
                 <TableHeader>
@@ -507,14 +507,14 @@ function CampaignCalendarView({
               key={key}
               className={`group min-h-[112px] rounded-lg border bg-white p-1.5 ${
                 isToday
-                  ? "border-sky-400 ring-2 ring-sky-100"
+                  ? "border-primary ring-2 ring-primary/10"
                   : isPast
                     ? "border-slate-200 bg-slate-50/80"
                     : "border-slate-200 hover:border-slate-300"
               }`}
             >
               <div className="mb-1.5 flex items-center justify-between">
-                <span className={`text-xs font-medium ${isToday ? "text-sky-700" : isPast ? "text-slate-400" : ""}`}>
+                <span className={`text-xs font-medium ${isToday ? "text-primary" : isPast ? "text-slate-400" : ""}`}>
                   {day.date.getDate()}
                 </span>
                 <div className="flex items-center gap-1">
@@ -523,7 +523,7 @@ function CampaignCalendarView({
                     <button
                       type="button"
                       onClick={() => onDateClick(day.date)}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-violet-100 hover:text-violet-700"
+                      className="flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200"
                       aria-label={`Add campaign on ${day.date.toLocaleDateString()}`}
                     >
                       <Plus className="h-3 w-3" />
@@ -544,7 +544,7 @@ function CampaignCalendarView({
         })}
       </div>
       {campaigns.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+        <div className="rounded-lg border border-dashed border-slate-200 py-10 text-center">
           <EmptyCampaignState totalItems={totalItems} />
         </div>
       ) : null}

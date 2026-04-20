@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarClock, Check, Clock3, Mail, MessageSquareText, Pencil, Send, Users } from "lucide-react";
-import { campaignStatusLabel, channelLabel, recipientSelectionLabel } from "@repo/marketing";
+import { campaignStatusLabel, channelLabel, recipientSelectionLabel, renderEmailDocumentToHtml } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
 import { BackButton } from "@/components/navigation/BackButton";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +55,7 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
   const campaign = campaignQuery.data;
 
   if (campaign.status === "DRAFT") {
-    const dest = campaign.channel === "EMAIL" ? `/campaigns/${campaignId}/edit` : "/campaigns";
-    router.replace(dest);
+    router.replace(`/campaigns/${campaignId}/edit`);
     return <LoadingState rows={3} />;
   }
   const scheduledCountdown =
@@ -69,9 +68,13 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
     campaign.scheduledAt != null &&
     new Date(campaign.scheduledAt).getTime() > now;
 
+  const renderedEmailHtml = campaign.contentDocument
+    ? renderEmailDocumentToHtml(campaign.contentDocument)
+    : campaign.contentHtml;
+
   return (
     <div className="grid gap-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-4">
         <div>
           <BackButton href="/campaigns" label="Back to campaigns" />
           <h1 className="mt-2 text-2xl font-semibold text-slate-900">{campaign.name}</h1>
@@ -79,7 +82,7 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
             <p className="text-sm text-muted-foreground">{channelLabel(campaign.channel)}</p>
             <span className="text-muted-foreground/40">·</span>
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
+              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium ${
                 campaign.status === "SENT"
                   ? "bg-emerald-100 text-emerald-800"
                   : campaign.status === "SCHEDULED"
@@ -96,14 +99,8 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {isFutureScheduled && campaign.channel === "EMAIL" ? (
-            <Button type="button" variant="outline" onClick={() => router.push(`/campaigns/${campaignId}/edit`)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          ) : null}
-          {pendingScheduledAt ? (
+        {pendingScheduledAt ? (
+          <div className="ml-auto">
             <Button
               type="button"
               variant="outline"
@@ -120,15 +117,21 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
                 ? "Scheduling..."
                 : `Schedule for ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(pendingScheduledAt))}`}
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <Card>
         <>
-          <CardHeader>
-              <CardTitle>Campaign details</CardTitle>
-            </CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+            <CardTitle>Campaign details</CardTitle>
+            {isFutureScheduled ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => router.push(`/campaigns/${campaignId}/edit`)}>
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                Edit campaign
+              </Button>
+            ) : null}
+          </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
                 <div className="grid gap-3">
@@ -170,21 +173,23 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
                       documentId={campaign.id}
                       subject={campaign.subject ?? ""}
                       previewText={campaign.previewText}
-                      contentHtml={campaign.contentHtml}
+                      contentHtml={renderedEmailHtml}
                     />
                   ) : (
-                    <div className="grid gap-4">
-                      <div className="grid gap-1">
-                        <p className="text-sm font-medium text-slate-900">Subject</p>
-                        <p className="text-sm text-slate-700">{campaign.subject ?? "No subject"}</p>
+                    <div className="grid gap-5">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Subject</p>
+                          <p className="mt-0.5 text-sm text-slate-900">{campaign.subject ?? <span className="text-muted-foreground">No subject</span>}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Preview text</p>
+                          <p className="mt-0.5 text-sm text-slate-900">{campaign.previewText ?? <span className="text-muted-foreground">No preview text</span>}</p>
+                        </div>
                       </div>
-                      <div className="grid gap-1">
-                        <p className="text-sm font-medium text-slate-900">Preview text</p>
-                        <p className="text-sm text-slate-700">{campaign.previewText ?? "No preview text"}</p>
-                      </div>
-                      <div className="grid gap-1">
-                        <p className="text-sm font-medium text-slate-900">Message</p>
-                        <p className="whitespace-pre-wrap rounded-lg border bg-slate-50 p-4 text-sm text-slate-700">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Message</p>
+                        <p className="mt-1.5 whitespace-pre-wrap rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-800">
                           {campaign.contentText}
                         </p>
                       </div>
@@ -211,9 +216,9 @@ function DetailRow({
   extra?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 rounded-full bg-white p-2 text-slate-500 shadow-sm">{icon}</div>
+        <div className="mt-0.5 rounded-md border border-slate-200 bg-white p-1.5 text-slate-500">{icon}</div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
           <p className="mt-1 text-sm text-slate-900">{value}</p>

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm --workspace @repo/dashboard run check-types)"
+      "Bash(npm --workspace @repo/dashboard run check-types)",
+      "Bash(npx tsc *)"
     ]
   }
 }

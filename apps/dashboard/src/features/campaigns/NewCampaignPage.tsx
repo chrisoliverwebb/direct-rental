@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CampaignChannelDialog } from "@/features/campaigns/CampaignChannelDialog";
-import { CampaignForm } from "@/features/campaigns/CampaignForm";
 import { EmailCampaignWorkspace } from "@/features/campaigns/EmailCampaignWorkspace";
+import { SmsCampaignWorkspace } from "@/features/campaigns/SmsCampaignWorkspace";
 import { useCreateCampaign, useDraftCampaigns } from "@/features/marketing/hooks";
 import type { DraftCampaignSummary } from "@repo/api-contracts";
 
@@ -45,35 +45,21 @@ export function NewCampaignPage() {
           }}
         />
       ) : channel === "SMS" ? (
-        <div className="grid gap-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">New SMS campaign</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create a mocked draft that persists through the MSW layer.
-            </p>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>SMS campaign</CardTitle>
-              <CardDescription>Simple text-only composer for transactional-style or promotional SMS.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CampaignForm
-                forcedChannel="SMS"
-                showChannelField={false}
-                submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
-                disabled={createCampaignMutation.isPending}
-                onSubmit={async (values) => {
-                  const result = await createCampaignMutation.mutateAsync(values);
-                  const dest = scheduledAt
-                    ? `/campaigns/${result.id}?scheduledAt=${scheduledAt}`
-                    : `/campaigns/${result.id}`;
-                  router.push(dest);
-                }}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <SmsCampaignWorkspace
+          mode="create"
+          scheduledAt={scheduledAt}
+          initialCampaign={{ name: defaultName }}
+          onBack={() => router.push("/campaigns")}
+          submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
+          onSave={async (values) => {
+            const result = await createCampaignMutation.mutateAsync(values);
+            const dest = scheduledAt
+              ? `/campaigns/${result.id}?scheduledAt=${scheduledAt}`
+              : `/campaigns/${result.id}`;
+            router.push(dest);
+            return result.id;
+          }}
+        />
       ) : (
         <Card>
           <CardHeader>

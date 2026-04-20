@@ -77,13 +77,13 @@ export function CampaignEmailEditor({
           contentEditable={
             <ContentEditable
               aria-label="Email content"
-              className={`${minHeightClassName} ${contentClassName} bg-transparent text-sm outline-none`}
+              className={`${minHeightClassName} ${contentClassName} bg-transparent outline-none`}
               onFocus={onActivate}
               onMouseDown={onActivate}
             />
           }
           placeholder={
-            <div className={`pointer-events-none absolute inset-x-0 top-0 text-sm ${placeholderClassName}`}>
+            <div className={`pointer-events-none absolute inset-x-0 top-0 ${placeholderClassName}`}>
               {placeholder}
             </div>
           }

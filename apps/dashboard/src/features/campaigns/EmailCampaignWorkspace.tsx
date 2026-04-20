@@ -366,7 +366,7 @@ export function EmailCampaignWorkspace({
   const [draggingType, setDraggingType] = useState<EmailBlock["type"] | null>(null);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [draggingSavedBlockId, setDraggingSavedBlockId] = useState<string | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ index: number; parentKey: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [saveBlockDialogOpen, setSaveBlockDialogOpen] = useState(false);
@@ -403,6 +403,35 @@ export function EmailCampaignWorkspace({
   const savedBlocks = savedBlocksQuery.data?.items ?? [];
 
   const selectedBlock = selectedBlockId ? findBlockById(document.blocks, selectedBlockId) : null;
+  const selectedBlockLocation = selectedBlockId ? findBlockLocation(document.blocks, selectedBlockId) : null;
+
+  const getParentBlocksLength = (parent: BlockParent): number => {
+    if (parent.type === "root") return document.blocks.length;
+    if (parent.type === "group") {
+      const g = findBlockById(document.blocks, parent.groupBlockId);
+      return g?.type === "group" ? g.blocks.length : 0;
+    }
+    const col = findBlockById(document.blocks, parent.columnsBlockId);
+    if (col?.type !== "columns") return 0;
+    return col.columns.find((c) => c.id === parent.columnId)?.blocks.length ?? 0;
+  };
+
+  const handleMoveSelectedUp = () => {
+    if (!selectedBlock || !selectedBlockLocation) return;
+    moveBlock(selectedBlock.id, Math.max(0, selectedBlockLocation.index - 1), selectedBlockLocation.parent);
+  };
+
+  const handleMoveSelectedDown = () => {
+    if (!selectedBlock || !selectedBlockLocation) return;
+    const parentLen = getParentBlocksLength(selectedBlockLocation.parent);
+    moveBlock(selectedBlock.id, Math.min(parentLen, selectedBlockLocation.index + 2), selectedBlockLocation.parent);
+  };
+
+  const selectedBlockLabel = selectedBlock ? ({
+    text: "Text", header: "Header", image: "Image", button: "Button",
+    spacer: "Spacer", divider: "Divider", columns: "Columns", footer: "Footer", group: "Group",
+  } as const)[selectedBlock.type] : null;
+
   const draggingResolvedType =
     draggingType ??
     (draggingBlockId ? findBlockById(document.blocks, draggingBlockId)?.type ?? null : null) ??
@@ -652,8 +681,8 @@ export function EmailCampaignWorkspace({
       channel: "EMAIL",
       subject: document.subject.trim() ? document.subject : null,
       previewText: document.previewText.trim() ? document.previewText : null,
-      contentHtml,
-      contentText,
+      contentHtml: contentHtml || " ",
+      contentText: contentText || " ",
       contentDocument: document,
       recipientSelection,
     });
@@ -662,11 +691,6 @@ export function EmailCampaignWorkspace({
   const handleSave = async () => {
     if (!document.name.trim()) {
       toast.error("Campaign name is required");
-      return;
-    }
-
-    if (!document.blocks.length) {
-      toast.error("Add at least one block before saving");
       return;
     }
 
@@ -766,7 +790,7 @@ export function EmailCampaignWorkspace({
         };
 
         return (
-          <div key={column.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={column.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                 {columnIndex === 0 ? "Left column" : "Right column"}
@@ -777,10 +801,10 @@ export function EmailCampaignWorkspace({
             <div className="grid gap-3 pt-4">
               {column.blocks.length === 0 ? (
                 <div
-                  className="grid min-h-[160px] place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center"
+                  className="grid min-h-[160px] place-items-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center"
                   onDragOver={(event) => {
                     event.preventDefault();
-                    setDropIndex(0);
+                    setDropTarget({ index: 0, parentKey: `column:${block.id}:${column.id}` });
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
@@ -798,7 +822,7 @@ export function EmailCampaignWorkspace({
                       }
                     }
 
-                    setDropIndex(null);
+                    setDropTarget(null);
                   }}
                 >
                   <div className="grid gap-3">
@@ -832,23 +856,19 @@ export function EmailCampaignWorkspace({
                     selected={nestedBlock.id === selectedBlockId}
                     previewMode={previewMode}
                     onSelect={() => selectBlock(nestedBlock.id)}
-                    onDuplicate={() => duplicateBlockAt(nestedBlock.id)}
-                    onDelete={() => deleteBlock(nestedBlock.id)}
-                    onMoveUp={() => moveBlock(nestedBlock.id, Math.max(0, nestedIndex - 1), parent)}
-                    onMoveDown={() => moveBlock(nestedBlock.id, Math.min(column.blocks.length, nestedIndex + 2), parent)}
                     onDragStart={() => setDraggingBlockId(nestedBlock.id)}
                     onDragEnd={() => setDraggingBlockId(null)}
-                    onSaveBlock={saveSelectedBlock}
                     onUpdate={(updater) => updateBlock(nestedBlock.id, updater)}
                     renderNestedColumns={renderNestedColumns}
                     renderGroupedBlocks={renderGroupedBlocks}
                   />
                   <CanvasDropZone
                     index={nestedIndex + 1}
+                    parentKey={`column:${block.id}:${column.id}`}
                     draggingResolvedType={draggingResolvedType}
-                    dropIndex={dropIndex}
+                    dropTarget={dropTarget}
                     savedBlocks={savedBlocks}
-                    setDropIndex={setDropIndex}
+                    setDropTarget={setDropTarget}
                     onDropBlock={(dropAt, payload) => handleDropBlock(dropAt, payload, parent)}
                   />
                 </Fragment>
@@ -867,7 +887,7 @@ export function EmailCampaignWorkspace({
     };
 
     return (
-      <div className="grid gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4" style={blockStylesToCss(block.styles)}>
+      <div className="grid gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4" style={blockStylesToCss(block.styles)}>
         <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Grouped section</p>
           <Badge variant="secondary">{block.blocks.length} blocks</Badge>
@@ -876,23 +896,23 @@ export function EmailCampaignWorkspace({
         {block.blocks.length === 0 ? (
           <div
             className={cn(
-              "grid min-h-[140px] place-items-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center",
+              "grid min-h-[140px] place-items-center rounded-lg border border-dashed border-slate-200 bg-white px-4 py-8 text-center",
               draggingResolvedType === "group" && "cursor-not-allowed",
             )}
             onDragOver={(event) => {
               event.preventDefault();
               if (draggingResolvedType === "group") {
                 event.dataTransfer.dropEffect = "none";
-                setDropIndex(null);
+                setDropTarget(null);
                 return;
               }
 
-              setDropIndex(0);
+              setDropTarget({ index: 0, parentKey: `group:${block.id}` });
             }}
             onDrop={(event) => {
               event.preventDefault();
               if (draggingResolvedType === "group") {
-                setDropIndex(null);
+                setDropTarget(null);
                 return;
               }
 
@@ -908,7 +928,7 @@ export function EmailCampaignWorkspace({
                 handleDropBlock(0, { type: "block", blockId }, parent);
               }
 
-              setDropIndex(null);
+              setDropTarget(null);
             }}
           >
             <div className="grid gap-3">
@@ -929,45 +949,48 @@ export function EmailCampaignWorkspace({
             </div>
           </div>
         ) : (
-          <div className="grid gap-3">
-            <CanvasDropZone
-              index={0}
-              draggingResolvedType={draggingResolvedType}
-              dropIndex={dropIndex}
-              savedBlocks={savedBlocks}
-              setDropIndex={setDropIndex}
-              disallowGroup
-              onDropBlock={(index, payload) => handleDropBlock(index, payload, parent)}
-            />
-            {block.blocks.map((nestedBlock, nestedIndex) => (
-              <Fragment key={nestedBlock.id}>
-                <BlockCard
-                  block={nestedBlock}
-                  selected={nestedBlock.id === selectedBlockId}
-                  previewMode={previewMode}
-                  onSelect={() => selectBlock(nestedBlock.id)}
-                  onDuplicate={() => duplicateBlockAt(nestedBlock.id)}
-                  onDelete={() => deleteBlock(nestedBlock.id)}
-                  onMoveUp={() => moveBlock(nestedBlock.id, Math.max(0, nestedIndex - 1), parent)}
-                  onMoveDown={() => moveBlock(nestedBlock.id, Math.min(block.blocks.length, nestedIndex + 2), parent)}
-                  onDragStart={() => setDraggingBlockId(nestedBlock.id)}
-                  onDragEnd={() => setDraggingBlockId(null)}
-                  onSaveBlock={saveSelectedBlock}
-                  onUpdate={(updater) => updateBlock(nestedBlock.id, updater)}
-                  renderNestedColumns={renderNestedColumns}
-                  renderGroupedBlocks={renderGroupedBlocks}
-                />
-                <CanvasDropZone
-                  index={nestedIndex + 1}
-                  draggingResolvedType={draggingResolvedType}
-                  dropIndex={dropIndex}
-                  savedBlocks={savedBlocks}
-                  setDropIndex={setDropIndex}
-                  disallowGroup
-                  onDropBlock={(index, payload) => handleDropBlock(index, payload, parent)}
-                />
-              </Fragment>
-            ))}
+          <div className="grid gap-0">
+            {(() => {
+              return (
+                <>
+                  <CanvasDropZone
+                    index={0}
+                    parentKey={`group:${block.id}`}
+                    draggingResolvedType={draggingResolvedType}
+                    dropTarget={dropTarget}
+                    savedBlocks={savedBlocks}
+                    setDropTarget={setDropTarget}
+                    disallowGroup
+                    onDropBlock={(i, payload) => handleDropBlock(i, payload, parent)}
+                  />
+                  {block.blocks.map((nestedBlock, nestedIndex) => (
+                    <Fragment key={nestedBlock.id}>
+                      <BlockCard
+                        block={nestedBlock}
+                        selected={nestedBlock.id === selectedBlockId}
+                        previewMode={previewMode}
+                        onSelect={() => selectBlock(nestedBlock.id)}
+                        onDragStart={() => setDraggingBlockId(nestedBlock.id)}
+                        onDragEnd={() => setDraggingBlockId(null)}
+                        onUpdate={(updater) => updateBlock(nestedBlock.id, updater)}
+                        renderNestedColumns={renderNestedColumns}
+                        renderGroupedBlocks={renderGroupedBlocks}
+                      />
+                      <CanvasDropZone
+                        index={nestedIndex + 1}
+                        parentKey={`group:${block.id}`}
+                        draggingResolvedType={draggingResolvedType}
+                        dropTarget={dropTarget}
+                        savedBlocks={savedBlocks}
+                        setDropTarget={setDropTarget}
+                        disallowGroup
+                        onDropBlock={(index, payload) => handleDropBlock(index, payload, parent)}
+                      />
+                    </Fragment>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -977,7 +1000,7 @@ export function EmailCampaignWorkspace({
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-        <header className="shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <header className="shrink-0 border-b border-slate-200 bg-white">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3">
             <BackButton onClick={handleAttemptExit} label="Back" iconOnly />
             <div className="min-w-0 flex-1">
@@ -1086,11 +1109,11 @@ export function EmailCampaignWorkspace({
                       }}
                       onDragEnd={() => setDraggingType(null)}
                       onClick={() => insertBlockAt(document.blocks.length, item.type)}
-                      className="grid gap-2 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                      className="grid gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900">
-                          <item.icon className="h-5 w-5" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                          <item.icon className="h-4 w-4" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-slate-900">{item.label}</p>
@@ -1114,7 +1137,7 @@ export function EmailCampaignWorkspace({
                           setDraggingSavedBlockId(item.id);
                         }}
                         onDragEnd={() => setDraggingSavedBlockId(null)}
-                        className="grid gap-1 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        className="grid gap-1 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <button type="button" onClick={() => insertSavedBlockAt(document.blocks.length, item.block)} className="grid gap-1 text-left">
@@ -1142,7 +1165,7 @@ export function EmailCampaignWorkspace({
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
+                    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
                       Saved blocks will appear here after you save one from the canvas toolbar.
                     </div>
                   )}
@@ -1155,27 +1178,14 @@ export function EmailCampaignWorkspace({
         <main className="min-h-0 overflow-hidden bg-slate-100" onPointerDownCapture={clearSelectedBlockIfOutsideCanvas}>
           <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-6">
             <div className="mx-auto w-full max-w-[640px]">
-              <div ref={emailCanvasRef} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b px-5 py-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {previewMode
-                          ? "Preview mode"
-                          : "Drag blocks from the sidebar, reorder them, or click to edit."}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">{document.blocks.length} blocks</Badge>
-                  </div>
-                </div>
-
-                <div className="p-5">
+              <div ref={emailCanvasRef} className="border border-slate-200 bg-white shadow-sm">
+                <div>
                   {document.blocks.length === 0 ? (
                     <div
-                      className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-8 py-16 text-center"
+                      className="grid min-h-[360px] place-items-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-8 py-16 text-center m-4"
                       onDragOver={(event) => {
                         event.preventDefault();
-                        setDropIndex(0);
+                        setDropTarget({ index: 0, parentKey: "root" });
                       }}
                       onDrop={(event) => {
                         event.preventDefault();
@@ -1191,7 +1201,7 @@ export function EmailCampaignWorkspace({
                           handleDropBlock(0, { type: "block", blockId });
                         }
 
-                        setDropIndex(null);
+                        setDropTarget(null);
                       }}
                       >
                         <div className="grid gap-4 text-center">
@@ -1217,45 +1227,45 @@ export function EmailCampaignWorkspace({
                       </div>
                     ) : null}
 
-                  <div className="grid gap-3">
+                  <div className="grid gap-0">
                     {document.blocks.length > 0 ? (
-                        <CanvasDropZone
-                          index={0}
-                          draggingResolvedType={draggingResolvedType}
-                          dropIndex={dropIndex}
-                          savedBlocks={savedBlocks}
-                          setDropIndex={setDropIndex}
-                          onDropBlock={(index, payload) => handleDropBlock(index, payload)}
-                        />
-                    ) : null}
-                    {document.blocks.map((block, index) => (
-                      <Fragment key={block.id}>
-                          <BlockCard
-                          block={block}
-                          selected={block.id === selectedBlockId}
-                          previewMode={previewMode}
-                          onSelect={() => selectBlock(block.id)}
-                          onDuplicate={() => duplicateBlockAt(block.id)}
-                          onDelete={() => deleteBlock(block.id)}
-                          onMoveUp={() => moveBlock(block.id, Math.max(0, index - 1))}
-                          onMoveDown={() => moveBlock(block.id, Math.min(document.blocks.length, index + 2))}
-                          onDragStart={() => setDraggingBlockId(block.id)}
-                          onDragEnd={() => setDraggingBlockId(null)}
-                          onSaveBlock={saveSelectedBlock}
-                          onUpdate={(updater) => updateBlock(block.id, updater)}
-                          renderNestedColumns={renderNestedColumns}
-                          renderGroupedBlocks={renderGroupedBlocks}
-                        />
-                        <CanvasDropZone
-                          index={index + 1}
-                          draggingResolvedType={draggingResolvedType}
-                          dropIndex={dropIndex}
-                          savedBlocks={savedBlocks}
-                          setDropIndex={setDropIndex}
-                          onDropBlock={(dropAt, payload) => handleDropBlock(dropAt, payload)}
-                        />
-                      </Fragment>
-                    ))}
+                        <>
+                          <CanvasDropZone
+                            index={0}
+                            parentKey="root"
+                            draggingResolvedType={draggingResolvedType}
+                            dropTarget={dropTarget}
+                            savedBlocks={savedBlocks}
+                            setDropTarget={setDropTarget}
+                            onDropBlock={(index, payload) => handleDropBlock(index, payload)}
+                          />
+                          {document.blocks.map((block, index) => (
+                            <Fragment key={block.id}>
+                              <BlockCard
+                                block={block}
+                                selected={block.id === selectedBlockId}
+                                previewMode={previewMode}
+                                onSelect={() => selectBlock(block.id)}
+                                onDragStart={() => setDraggingBlockId(block.id)}
+                                onDragEnd={() => setDraggingBlockId(null)}
+                                onUpdate={(updater) => updateBlock(block.id, updater)}
+                                renderNestedColumns={renderNestedColumns}
+                                renderGroupedBlocks={renderGroupedBlocks}
+                              />
+                              <CanvasDropZone
+                                index={index + 1}
+                                parentKey="root"
+                                draggingResolvedType={draggingResolvedType}
+                                dropTarget={dropTarget}
+                                savedBlocks={savedBlocks}
+                                setDropTarget={setDropTarget}
+                                showInsertControl={index === document.blocks.length - 1}
+                                onDropBlock={(dropAt, payload) => handleDropBlock(dropAt, payload)}
+                              />
+                            </Fragment>
+                          ))}
+                        </>
+                      ) : null}
                   </div>
                 </div>
               </div>
@@ -1266,10 +1276,36 @@ export function EmailCampaignWorkspace({
         <aside className="min-h-0 overflow-hidden border-t border-slate-200 bg-white lg:border-l lg:border-t-0">
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
             <div className="border-b px-4 py-3">
-              <p className="text-sm font-semibold text-slate-900">Settings</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedBlock ? `Editing ${selectedBlock.type} block` : "Select a block to edit its settings"}
-              </p>
+              {selectedBlock && selectedBlockLabel ? (
+                <div className="flex items-center justify-between gap-1">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{selectedBlockLabel} block</p>
+                    <p className="text-xs text-muted-foreground">Drag the handle on the canvas to reorder.</p>
+                  </div>
+                  <div className="flex shrink-0 items-center">
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleMoveSelectedUp} aria-label="Move up">
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleMoveSelectedDown} aria-label="Move down">
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => duplicateBlockAt(selectedBlock.id)} aria-label="Duplicate">
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={saveSelectedBlock} aria-label="Save block">
+                      <BookmarkPlus className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteBlock(selectedBlock.id)} aria-label="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Settings</p>
+                  <p className="text-xs text-muted-foreground">Select a block to edit its settings.</p>
+                </div>
+              )}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
               {selectedBlock ? (
@@ -1278,7 +1314,7 @@ export function EmailCampaignWorkspace({
                   onUpdate={(updater) => updateBlock(selectedBlock.id, updater)}
                 />
               ) : (
-                <div className="grid gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
+                <div className="grid gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-muted-foreground">
                   <p>No block selected.</p>
                   <p>
                     Choose a block from the canvas to adjust spacing, colours, links, and layout.
@@ -1292,7 +1328,7 @@ export function EmailCampaignWorkspace({
 
       {previewMode ? (
         <div className="fixed inset-0 z-40 bg-slate-950/40 p-6">
-          <div className="relative h-full overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 shadow-2xl">
+          <div className="relative h-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-lg">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">Preview mode</p>
@@ -1403,7 +1439,7 @@ export function EmailCampaignWorkspace({
                 <option value="ALL">All contacts</option>
               </select>
             </label>
-            <div className="grid gap-3 rounded-xl border border-slate-200 p-4">
+            <div className="grid gap-3 rounded-lg border border-slate-200 p-4">
               <div>
                 <p className="text-sm font-semibold text-slate-900">
                   {campaignStatus === "SCHEDULED" ? "Edit schedule" : "Schedule"}
@@ -1428,7 +1464,7 @@ export function EmailCampaignWorkspace({
                 </Button>
               </div>
             </div>
-            <div className="grid gap-3 rounded-xl border border-slate-200 p-4">
+            <div className="grid gap-3 rounded-lg border border-slate-200 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -1453,13 +1489,17 @@ export function EmailCampaignWorkspace({
   );
 }
 
+type DropTarget = { index: number; parentKey: string } | null;
+
 type CanvasDropZoneProps = {
   index: number;
+  parentKey: string;
   draggingResolvedType: EmailBlock["type"] | null;
-  dropIndex: number | null;
+  dropTarget: DropTarget;
   savedBlocks: SavedEmailBlock[];
-  setDropIndex: (index: number | null) => void;
+  setDropTarget: (target: DropTarget) => void;
   disallowGroup?: boolean;
+  showInsertControl?: boolean;
   onDropBlock: (
     index: number,
     payload:
@@ -1568,7 +1608,7 @@ function BlockInsertControl({
           event.stopPropagation();
           setMenuOpen((current) => !current);
         }}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
         aria-label="Add block options"
       >
         +
@@ -1577,7 +1617,7 @@ function BlockInsertControl({
         ? createPortal(
             <div
               ref={menuRef}
-              className="z-50 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl"
+              className="z-50 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
               style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left }}
             >
               <div className="grid gap-2 border-b border-slate-100 pb-3">
@@ -1652,33 +1692,39 @@ function BlockInsertControl({
 
 function CanvasDropZone({
   index,
+  parentKey,
   draggingResolvedType,
-  dropIndex,
+  dropTarget,
   savedBlocks,
-  setDropIndex,
+  setDropTarget,
   onDropBlock,
   disallowGroup = false,
+  showInsertControl = false,
 }: CanvasDropZoneProps) {
   const active = draggingResolvedType !== null;
-  const highlighted = dropIndex === index;
+  const highlighted = dropTarget?.index === index && dropTarget?.parentKey === parentKey;
   const groupDropBlocked = disallowGroup && draggingResolvedType === "group";
+  const showButton = showInsertControl && !active;
 
   return (
     <div
-      className={cn("group relative transition-all", active ? "h-10" : "h-6", groupDropBlocked && "cursor-not-allowed")}
+      className={cn(
+        "group relative transition-all",
+        active ? "h-10" : showButton ? "h-10 my-1" : "h-3",
+        groupDropBlocked && "cursor-not-allowed",
+      )}
       onDragOver={(event) => {
         event.preventDefault();
         if (groupDropBlocked) {
           event.dataTransfer.dropEffect = "none";
-          setDropIndex(null);
+          setDropTarget(null);
           return;
         }
-
-        setDropIndex(index);
+        setDropTarget({ index, parentKey });
       }}
       onDragLeave={() => {
-        if (dropIndex === index) {
-          setDropIndex(null);
+        if (highlighted) {
+          setDropTarget(null);
         }
       }}
       onDrop={(event) => {
@@ -1688,7 +1734,7 @@ function CanvasDropZone({
         const savedBlockId = event.dataTransfer.getData("application/x-saved-email-block-id");
 
         if (groupDropBlocked) {
-          setDropIndex(null);
+          setDropTarget(null);
           return;
         }
 
@@ -1700,28 +1746,26 @@ function CanvasDropZone({
           onDropBlock(index, { type: "block", blockId });
         }
 
-        setDropIndex(null);
+        setDropTarget(null);
       }}
     >
-      <div
-        className={cn(
-          "absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 transition",
-          groupDropBlocked
-            ? "bg-rose-300"
-            : highlighted
-              ? "bg-sky-500"
-              : active
-                ? "bg-slate-200"
-                : "bg-transparent group-hover:bg-slate-300",
-        )}
-      />
-      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-        <BlockInsertControl
-          onInsertBlock={(blockType) => onDropBlock(index, { type: "library", blockType })}
-          onInsertSavedBlock={(savedBlockId) => onDropBlock(index, { type: "saved", savedBlockId })}
-          savedBlocks={savedBlocks}
+      {active ? (
+        <div
+          className={cn(
+            "absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 transition",
+            groupDropBlocked ? "bg-rose-300" : highlighted ? "bg-primary" : "bg-slate-200",
+          )}
         />
-      </div>
+      ) : null}
+      {showButton ? (
+        <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+          <BlockInsertControl
+            onInsertBlock={(blockType) => onDropBlock(index, { type: "library", blockType })}
+            onInsertSavedBlock={(savedBlockId) => onDropBlock(index, { type: "saved", savedBlockId })}
+            savedBlocks={savedBlocks}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1731,13 +1775,8 @@ type BlockCardProps = {
   selected: boolean;
   previewMode: boolean;
   onSelect: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
-  onSaveBlock: () => void;
   onUpdate: (updater: (block: EmailBlock) => EmailBlock) => void;
   renderNestedColumns?: (block: Extract<EmailBlock, { type: "columns" }>) => ReactNode;
   renderGroupedBlocks?: (block: EmailGroupBlock) => ReactNode;
@@ -1748,13 +1787,8 @@ function BlockCard({
   selected,
   previewMode,
   onSelect,
-  onDuplicate,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
   onDragStart,
   onDragEnd,
-  onSaveBlock,
   onUpdate,
   renderNestedColumns,
   renderGroupedBlocks,
@@ -1783,88 +1817,41 @@ function BlockCard({
   }, [block.type]);
 
   return (
-    <Card
+    <div
       className={cn(
-        "overflow-hidden border-slate-200 transition",
-        selected && "ring-2 ring-sky-500",
-        previewMode && "shadow-none",
+        "group relative cursor-pointer",
+        selected && !previewMode && "ring-2 ring-inset ring-primary",
+        !selected && !previewMode && "hover:ring-1 hover:ring-inset hover:ring-slate-200",
       )}
       onClick={(event) => {
         event.stopPropagation();
         onSelect();
       }}
     >
-      {selected ? (
-        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
-          <button
-            type="button"
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData("application/x-email-block-id", block.id);
-              event.dataTransfer.effectAllowed = "move";
-              onDragStart();
-            }}
-            onDragEnd={onDragEnd}
-            className="cursor-grab rounded-md p-1 text-slate-400 transition hover:bg-white hover:text-slate-700"
-            aria-label={`Drag ${blockLabel}`}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-          <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-            {blockLabel}
-          </p>
-          <div className="flex items-center gap-1">
-            <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={onMoveUp} aria-label="Move up">
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={onMoveDown}
-              aria-label="Move down"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={onDuplicate}
-              aria-label="Duplicate block"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={onSaveBlock}
-              aria-label="Save block"
-            >
-              <BookmarkPlus className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-red-600 hover:text-red-700"
-              onClick={onDelete}
-              aria-label="Delete block"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {!previewMode ? (
+        <button
+          type="button"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData("application/x-email-block-id", block.id);
+            event.dataTransfer.effectAllowed = "move";
+            onDragStart();
+          }}
+          onDragEnd={onDragEnd}
+          className={cn(
+            "absolute left-0 top-1/2 z-10 -translate-x-full -translate-y-1/2 cursor-grab rounded-r-none rounded-l p-1 transition",
+            selected
+              ? "bg-primary text-white opacity-100"
+              : "bg-white text-slate-400 opacity-0 shadow-sm group-hover:opacity-100",
+          )}
+          aria-label={`Drag ${blockLabel}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
       ) : null}
-
-      <div className="grid gap-4 p-4">
-        {renderBlockPreview(block, previewMode, onUpdate, onSelect, renderNestedColumns, renderGroupedBlocks)}
-      </div>
-    </Card>
+      {renderBlockPreview(block, previewMode, onUpdate, onSelect, renderNestedColumns, renderGroupedBlocks)}
+    </div>
   );
 }
 
@@ -1931,19 +1918,17 @@ function renderBlockPreview(
       );
     case "image":
       return (
-        <div style={blockStylesToCss(block.styles)}>
-          <ImageBlockEditor
-            imageUrl={block.imageUrl}
-            alt={block.alt}
-            disabled={previewMode}
-            onImageUrlChange={(value) =>
-              onUpdate((current) => ({
-                ...current,
-                imageUrl: value,
-              }))
-            }
-          />
-        </div>
+        <ImageBlockEditor
+          imageUrl={block.imageUrl}
+          alt={block.alt}
+          disabled={previewMode}
+          onImageUrlChange={(value) =>
+            onUpdate((current) => ({
+              ...current,
+              imageUrl: value,
+            }))
+          }
+        />
       );
     case "button":
       return (
@@ -1978,14 +1963,14 @@ function renderBlockPreview(
         </div>
       );
     case "spacer":
-      return <div className="rounded-xl border border-dashed border-slate-300 bg-white" style={{ height: block.height }} />;
+      return <div className="rounded-lg border border-dashed border-slate-300 bg-white" style={{ height: block.height }} />;
     case "divider":
       return <div className="border-t" style={{ borderTopWidth: block.thickness, borderTopColor: block.color ?? "#e2e8f0" }} />;
     case "columns":
       return renderNestedColumns ? (
         renderNestedColumns(block)
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white p-4 text-sm text-muted-foreground">
           Columns are unavailable in this context.
         </div>
       );
@@ -2046,12 +2031,12 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
   };
 
   return (
-    <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div>
       <div
         className={cn(
-          "group relative overflow-hidden rounded-lg border border-dashed bg-white transition",
-          disabled ? "pointer-events-none border-slate-200" : "cursor-pointer",
-          isDraggingFile ? "border-sky-500 bg-sky-50" : "border-slate-300",
+          "group relative overflow-hidden bg-white transition",
+          disabled ? "pointer-events-none" : "cursor-pointer",
+          isDraggingFile ? "ring-2 ring-primary" : "",
         )}
         onDragOver={(event) => {
           if (disabled) {
@@ -2079,7 +2064,7 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
         ) : (
           <div className="grid min-h-[220px] place-items-center px-6 py-10 text-center">
             <div className="grid gap-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-500">
                 <ImageIcon className="h-5 w-5" />
               </div>
               <div className="grid gap-1">

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { EmailCampaignWorkspace } from "@/features/campaigns/EmailCampaignWorkspace";
+import { SmsCampaignWorkspace } from "@/features/campaigns/SmsCampaignWorkspace";
 import { useCampaign, useSendCampaign, useUpdateCampaign } from "@/features/marketing/hooks";
 
 export function CampaignEditPage({ campaignId }: { campaignId: string }) {
@@ -32,43 +33,44 @@ export function CampaignEditPage({ campaignId }: { campaignId: string }) {
 
   const campaign = campaignQuery.data;
 
-  if ((campaign.status !== "DRAFT" && campaign.status !== "SCHEDULED") || campaign.channel !== "EMAIL") {
+  if (campaign.status !== "DRAFT" && campaign.status !== "SCHEDULED") {
     return (
       <ErrorState
         title="Editor unavailable"
-        description="Only email campaigns can be edited in the fullscreen editor."
+        description="Only draft or scheduled campaigns can be edited."
         onRetry={() => router.replace(`/campaigns/${campaignId}`)}
       />
     );
   }
 
-  return (
-    <EmailCampaignWorkspace
-      mode="edit"
-      initialCampaign={campaign}
-      campaignStatus={campaign.status}
-      initialScheduledAt={campaign.status === "SCHEDULED" ? (campaign.scheduledAt ?? undefined) : undefined}
-      onBack={() =>
-        campaign.status === "SCHEDULED"
-          ? router.push(`/campaigns/${campaignId}`)
-          : router.push("/campaigns")
-      }
-      submitLabel={
-        updateMutation.isPending
-          ? "Saving..."
-          : campaign.status === "SCHEDULED"
-            ? "Save changes"
-            : "Save draft"
-      }
-      onSave={async (values) => {
-        await updateMutation.mutateAsync(values);
-        return campaign.id;
-      }}
-      onSend={async (request) => {
-        await sendMutation.mutateAsync(request);
-        await campaignQuery.refetch();
-        router.replace(`/campaigns/${campaignId}`);
-      }}
-    />
-  );
+  const sharedProps = {
+    mode: "edit" as const,
+    initialCampaign: campaign,
+    campaignStatus: campaign.status,
+    initialScheduledAt: campaign.status === "SCHEDULED" ? (campaign.scheduledAt ?? undefined) : undefined,
+    onBack: () =>
+      campaign.status === "SCHEDULED"
+        ? router.push(`/campaigns/${campaignId}`)
+        : router.push("/campaigns"),
+    submitLabel: updateMutation.isPending
+      ? "Saving..."
+      : campaign.status === "SCHEDULED"
+        ? "Save changes"
+        : "Save draft",
+    onSave: async (values: Parameters<typeof updateMutation.mutateAsync>[0]) => {
+      await updateMutation.mutateAsync(values);
+      return campaign.id;
+    },
+    onSend: async (request: Parameters<typeof sendMutation.mutateAsync>[0]) => {
+      await sendMutation.mutateAsync(request);
+      await campaignQuery.refetch();
+      router.replace(`/campaigns/${campaignId}`);
+    },
+  };
+
+  if (campaign.channel === "SMS") {
+    return <SmsCampaignWorkspace {...sharedProps} />;
+  }
+
+  return <EmailCampaignWorkspace {...sharedProps} />;
 }

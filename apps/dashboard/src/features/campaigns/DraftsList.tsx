@@ -30,9 +30,9 @@ export function DraftsList({ drafts, limit, allowDelete = false, onNavigate }: D
       {visible.map((campaign) => (
         <div key={campaign.id} className="group flex items-stretch gap-2">
           <Link
-            href={campaign.channel === "EMAIL" ? `/campaigns/${campaign.id}/edit` : "/campaigns"}
+            href={`/campaigns/${campaign.id}/edit`}
             onClick={onNavigate}
-            className="grid min-w-0 flex-1 gap-2 rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
+            className="grid min-w-0 flex-1 gap-2 rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

@@ -245,26 +245,16 @@ export const campaignDetailSchema = z.union([draftCampaignDetailSchema, publishe
 
 export type CampaignDetail = z.infer<typeof campaignDetailSchema>;
 
-export const createCampaignRequestSchema = z
-  .object({
-    name: z.string().trim().min(1, "Campaign name is required"),
-    channel: campaignChannelSchema,
-    subject: z.string().nullable(),
-    previewText: z.string().nullable(),
-    contentHtml: z.string().trim().min(1, "HTML content is required"),
-    contentText: z.string().trim().min(1, "Plain text content is required"),
-    contentDocument: emailDocumentSchema.nullable().optional(),
-    recipientSelection: campaignRecipientSelectionSchema,
-  })
-  .superRefine((value, ctx) => {
-    if (value.channel === "EMAIL" && !value.subject?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["subject"],
-        message: "Subject is required for email campaigns",
-      });
-    }
-  });
+export const createCampaignRequestSchema = z.object({
+  name: z.string().trim().min(1, "Campaign name is required"),
+  channel: campaignChannelSchema,
+  subject: z.string().nullable(),
+  previewText: z.string().nullable(),
+  contentHtml: z.string().trim().min(1, "HTML content is required"),
+  contentText: z.string().trim().min(1, "Plain text content is required"),
+  contentDocument: emailDocumentSchema.nullable().optional(),
+  recipientSelection: campaignRecipientSelectionSchema,
+});
 
 export type CreateCampaignRequest = z.infer<typeof createCampaignRequestSchema>;
 

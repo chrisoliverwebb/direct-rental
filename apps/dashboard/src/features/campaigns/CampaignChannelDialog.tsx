@@ -57,11 +57,11 @@ export function CampaignChannelDialog({
             <div className="grid gap-4 sm:grid-cols-2">
           <button
             type="button"
-            className="group grid gap-3 rounded-xl border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
+            className="group grid gap-3 rounded-lg border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
             onClick={() => handleSelect("EMAIL")}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900">
-              <Mail className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+              <Mail className="h-4 w-4" />
             </div>
             <div className="grid gap-1">
               <h3 className="text-base font-semibold text-slate-900">Email</h3>
@@ -73,11 +73,11 @@ export function CampaignChannelDialog({
 
           <button
             type="button"
-            className="group grid gap-3 rounded-xl border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
+            className="group grid gap-3 rounded-lg border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
             onClick={() => handleSelect("SMS")}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900">
-              <MessageSquareText className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+              <MessageSquareText className="h-4 w-4" />
             </div>
             <div className="grid gap-1">
               <h3 className="text-base font-semibold text-slate-900">SMS</h3>
