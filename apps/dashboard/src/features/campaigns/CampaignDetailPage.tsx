@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
-import { EmailCampaignPreview } from "@/features/campaigns/EmailCampaignPreview";
 import { useCampaign, useSendCampaign } from "@/features/marketing/hooks";
 
 export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
@@ -71,6 +70,7 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
   const renderedEmailHtml = campaign.contentDocument
     ? renderEmailDocumentToHtml(campaign.contentDocument)
     : campaign.contentHtml;
+  const renderedEmailBody = extractEmailBodyHtml(renderedEmailHtml);
 
   return (
     <div className="grid gap-6">
@@ -169,12 +169,31 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
                 </div>
                 <div className="grid gap-4">
                   {campaign.channel === "EMAIL" ? (
-                    <EmailCampaignPreview
-                      documentId={campaign.id}
-                      subject={campaign.subject ?? ""}
-                      previewText={campaign.previewText}
-                      contentHtml={renderedEmailHtml}
-                    />
+                    <div className="grid gap-5">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Subject</p>
+                          <p className="mt-0.5 text-sm text-slate-900">
+                            {campaign.subject ?? <span className="text-muted-foreground">No subject</span>}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Preview text</p>
+                          <p className="mt-0.5 text-sm text-slate-900">
+                            {campaign.previewText ?? <span className="text-muted-foreground">No preview text</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Message</p>
+                        <div className="mt-1.5 overflow-hidden rounded-md border bg-white">
+                          <div
+                            className="bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_14%)] p-4 lg:p-8"
+                            dangerouslySetInnerHTML={{ __html: renderedEmailBody }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid gap-5">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -202,6 +221,11 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
         </Card>
     </div>
   );
+}
+
+function extractEmailBodyHtml(html: string) {
+  const match = html.match(/<body[^>]*>[\s\S]*?<div[^>]*>([\s\S]*)<\/div>\s*<\/body>/i);
+  return match?.[1]?.trim() || html;
 }
 
 function DetailRow({

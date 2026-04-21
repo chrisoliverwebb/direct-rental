@@ -7,6 +7,7 @@ import {
   type ComponentType,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -35,10 +36,12 @@ import {
   Send,
   Square,
   Trash2,
+  Undo2,
   Underline,
   Strikethrough,
   Type,
   Columns2,
+  Redo2,
 } from "lucide-react";
 import {
   createCampaignRequestSchema,
@@ -78,6 +81,7 @@ import { ColourInput } from "@/components/ui/colour-input";
 import { CampaignEmailEditor } from "@/features/campaigns/CampaignEmailEditor";
 import { EmailCampaignPreview } from "@/features/campaigns/EmailCampaignPreview";
 import { useCreateSavedBlock, useDeleteSavedBlock, useSavedBlocks } from "@/features/marketing/hooks";
+import { useUndoRedoState } from "@/hooks/useUndoRedoState";
 import { cn } from "@/lib/utils";
 
 type EmailCampaignWorkspaceProps = {
@@ -113,6 +117,11 @@ const blockLibrary: BlockLibraryItem[] = [
 type PendingSavedBlock = {
   blockId: string;
   name: string;
+};
+
+type EmailEditorState = {
+  document: EmailDocument;
+  recipientSelection: CreateCampaignRequest["recipientSelection"];
 };
 
 type BlockParent =
@@ -346,6 +355,14 @@ function createDocumentSnapshot(
   });
 }
 
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
 export function EmailCampaignWorkspace({
   mode,
   onBack,
@@ -375,9 +392,6 @@ export function EmailCampaignWorkspace({
     const seed = initialScheduledAt ?? scheduledAt;
     return seed ? new Date(seed).toISOString().slice(0, 16) : "";
   });
-  const [recipientSelection, setRecipientSelection] = useState<CreateCampaignRequest["recipientSelection"]>(
-    initialCampaign?.recipientSelection ?? { type: "ALL" },
-  );
   const emailCanvasRef = useRef<HTMLDivElement>(null);
   const savedBlocksQuery = useSavedBlocks();
   const createSavedBlockMutation = useCreateSavedBlock();
@@ -396,7 +410,13 @@ export function EmailCampaignWorkspace({
       : createEmptyEmailDocument(),
     [initialCampaign],
   );
-  const [document, setDocument] = useState<EmailDocument>(initialDocument);
+  const initialEditorState: EmailEditorState = {
+    document: initialDocument,
+    recipientSelection: initialCampaign?.recipientSelection ?? { type: "ALL" },
+  };
+  const { state: editorState, setState: setEditorState, canUndo, canRedo, undo, redo } = useUndoRedoState(initialEditorState);
+  const document = editorState.document;
+  const recipientSelection = editorState.recipientSelection;
   const savedSnapshotRef = useRef(
     createDocumentSnapshot(initialDocument, initialCampaign?.recipientSelection ?? { type: "ALL" }),
   );
@@ -458,7 +478,10 @@ export function EmailCampaignWorkspace({
   };
 
   const updateDocument = (updater: (current: EmailDocument) => EmailDocument) => {
-    setDocument((current) => updater(current));
+    setEditorState((current) => ({
+      ...current,
+      document: updater(current.document),
+    }));
   };
 
   const updateField = (field: "name" | "subject" | "previewText", value: string) => {
@@ -478,6 +501,45 @@ export function EmailCampaignWorkspace({
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      if (event.metaKey || event.ctrlKey) {
+        if (key === "z") {
+          event.preventDefault();
+          if (event.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+          return;
+        }
+
+        if (key === "y") {
+          event.preventDefault();
+          redo();
+          return;
+        }
+      }
+
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedBlockId && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        setEditorState((current) => ({
+          ...current,
+          document: {
+            ...current.document,
+            blocks: removeBlockById(current.document.blocks, selectedBlockId).blocks,
+          },
+        }));
+        setSelectedBlockId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [redo, selectedBlockId, setEditorState, undo]);
 
   const handleAttemptExit = () => {
     if (!hasUnsavedChanges) {
@@ -672,7 +734,7 @@ export function EmailCampaignWorkspace({
     }
   };
 
-  const createCampaignPayload = (): CreateCampaignRequest => {
+  const createCampaignPayload = useCallback((): CreateCampaignRequest => {
     const contentHtml = renderEmailDocumentToHtml(document);
     const contentText = renderEmailDocumentToText(document);
 
@@ -686,11 +748,13 @@ export function EmailCampaignWorkspace({
       contentDocument: document,
       recipientSelection,
     });
-  };
+  }, [document, recipientSelection]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!document.name.trim()) {
-      toast.error("Campaign name is required");
+      if (!silent) {
+        toast.error("Campaign name is required");
+      }
       return;
     }
 
@@ -699,7 +763,9 @@ export function EmailCampaignWorkspace({
       const payload = createCampaignPayload();
       const campaignId = await onSave(payload);
       savedSnapshotRef.current = createDocumentSnapshot(document, recipientSelection);
-      toast.success(mode === "create" ? "Campaign draft saved" : "Campaign updated");
+      if (!silent) {
+        toast.success(mode === "create" ? "Campaign draft saved" : "Campaign updated");
+      }
       if (mode === "create") {
         const dest = scheduledAt
           ? `/campaigns/${campaignId}/edit?scheduledAt=${scheduledAt}`
@@ -708,11 +774,23 @@ export function EmailCampaignWorkspace({
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save campaign";
-      toast.error("Save failed", { description: message });
+      toast.error(silent ? "Autosave failed" : "Save failed", { description: message });
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [createCampaignPayload, document, mode, onSave, recipientSelection, router, scheduledAt]);
+
+  useEffect(() => {
+    if (mode !== "edit" || !hasUnsavedChanges || isSaving || !document.name.trim() || !document.blocks.length) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void handleSave({ silent: true });
+    }, 2500);
+
+    return () => window.clearTimeout(timeout);
+  }, [document, handleSave, hasUnsavedChanges, isSaving, mode, recipientSelection]);
 
   const handleSend = async () => {
     if (!onSend) {
@@ -953,16 +1031,6 @@ export function EmailCampaignWorkspace({
             {(() => {
               return (
                 <>
-                  <CanvasDropZone
-                    index={0}
-                    parentKey={`group:${block.id}`}
-                    draggingResolvedType={draggingResolvedType}
-                    dropTarget={dropTarget}
-                    savedBlocks={savedBlocks}
-                    setDropTarget={setDropTarget}
-                    disallowGroup
-                    onDropBlock={(i, payload) => handleDropBlock(i, payload, parent)}
-                  />
                   {block.blocks.map((nestedBlock, nestedIndex) => (
                     <Fragment key={nestedBlock.id}>
                       <BlockCard
@@ -1003,27 +1071,33 @@ export function EmailCampaignWorkspace({
         <header className="shrink-0 border-b border-slate-200 bg-white">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3">
             <BackButton onClick={handleAttemptExit} label="Back" iconOnly />
-            <div className="min-w-0 flex-1">
-              <Input
-                value={document.name}
-                onChange={(event) => updateField("name", event.target.value)}
-                placeholder="Campaign name"
-                className="h-auto max-w-xl border-transparent bg-transparent p-0 text-base font-medium shadow-none focus-visible:border-input focus-visible:bg-background focus-visible:px-3 focus-visible:py-2"
-              />
-            </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="min-w-0 flex-1 flex items-center gap-2">
               {mode === "edit" ? (
                 <Badge variant={campaignStatus === "SCHEDULED" ? "warning" : "secondary"}>
                   {campaignStatus === "SCHEDULED" ? "Scheduled" : "Draft"}
                 </Badge>
               ) : null}
-              <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
-                {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
-              </Badge>
-              <Button type="button" onClick={handleSave} disabled={isSaving || !hasUnsavedChanges}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Saving..." : submitLabel}
-              </Button>
+              <Input
+                value={document.name}
+                onChange={(event) => updateField("name", event.target.value)}
+                placeholder="Campaign name"
+                className="h-auto max-w-xl border-0 bg-white p-0 text-base font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+            <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
+              {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+            </Badge>
+            <Button type="button" variant="outline" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo">
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo">
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !hasUnsavedChanges}>
+              <Save className="mr-2 h-4 w-4" />
+              {isSaving ? "Saving..." : submitLabel}
+            </Button>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -1230,15 +1304,6 @@ export function EmailCampaignWorkspace({
                   <div className="grid gap-0">
                     {document.blocks.length > 0 ? (
                         <>
-                          <CanvasDropZone
-                            index={0}
-                            parentKey="root"
-                            draggingResolvedType={draggingResolvedType}
-                            dropTarget={dropTarget}
-                            savedBlocks={savedBlocks}
-                            setDropTarget={setDropTarget}
-                            onDropBlock={(index, payload) => handleDropBlock(index, payload)}
-                          />
                           {document.blocks.map((block, index) => (
                             <Fragment key={block.id}>
                               <BlockCard
@@ -1433,7 +1498,12 @@ export function EmailCampaignWorkspace({
               <span className="text-sm font-medium text-slate-900">Who</span>
               <select
                 value={recipientSelection.type}
-                onChange={() => setRecipientSelection({ type: "ALL" })}
+                onChange={() =>
+                  setEditorState((current) => ({
+                    ...current,
+                    recipientSelection: { type: "ALL" },
+                  }))
+                }
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="ALL">All contacts</option>
@@ -1710,7 +1780,7 @@ function CanvasDropZone({
     <div
       className={cn(
         "group relative transition-all",
-        active ? "h-10" : showButton ? "h-10 my-1" : "h-3",
+        active ? "h-10" : showButton ? "h-10 my-1" : "h-0",
         groupDropBlocked && "cursor-not-allowed",
       )}
       onDragOver={(event) => {
@@ -1819,9 +1889,9 @@ function BlockCard({
   return (
     <div
       className={cn(
-        "group relative cursor-pointer",
-        selected && !previewMode && "ring-2 ring-inset ring-primary",
-        !selected && !previewMode && "hover:ring-1 hover:ring-inset hover:ring-slate-200",
+        "group relative cursor-pointer rounded-md transition",
+        selected && !previewMode && "z-20 ring-2 ring-primary ring-offset-2 ring-offset-slate-50",
+        !selected && !previewMode && "hover:z-10 hover:ring-1 hover:ring-slate-200",
       )}
       onClick={(event) => {
         event.stopPropagation();
@@ -1919,14 +1989,23 @@ function renderBlockPreview(
     case "image":
       return (
         <ImageBlockEditor
-          imageUrl={block.imageUrl}
+          imageUrl={block.sourceType === "url" ? (block.imageUrl ?? "") : (block.uploadedImageData ?? "")}
           alt={block.alt}
+          width={block.width}
+          height={block.height ?? null}
+          fit={block.fit}
           disabled={previewMode}
-          onImageUrlChange={(value) =>
-            onUpdate((current) => ({
-              ...current,
-              imageUrl: value,
-            }))
+          onUploadImageData={(value) =>
+            onUpdate((current) =>
+              current.type === "image"
+                ? {
+                    ...current,
+                    sourceType: "upload",
+                    uploadedImageData: value,
+                    imageUrl: null,
+                  }
+                : current,
+            )
           }
         />
       );
@@ -1998,14 +2077,21 @@ function renderBlockPreview(
 type ImageBlockEditorProps = {
   imageUrl: string;
   alt: string;
+  width: "full" | number;
+  height: number | null;
+  fit: "cover" | "contain" | "fill";
   disabled: boolean;
-  onImageUrlChange: (value: string) => void;
+  onUploadImageData: (value: string) => void;
 };
 
-function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBlockEditorProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+function ImageBlockEditor({ imageUrl, alt, width, height, fit, disabled, onUploadImageData }: ImageBlockEditorProps) {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const style: CSSProperties = {
+    width: width === "full" ? "100%" : `${width}px`,
+    height: height ? `${height}px` : "auto",
+    objectFit: fit,
+  };
 
   const handleFile = async (file: File | undefined) => {
     if (!file) {
@@ -2020,7 +2106,7 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
     try {
       setIsUploading(true);
       const dataUrl = await readImageFileAsDataUrl(file);
-      onImageUrlChange(dataUrl);
+      onUploadImageData(dataUrl);
       toast.success("Image uploaded");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to upload image";
@@ -2059,8 +2145,11 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
         }}
       >
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={alt || "Email image"} className="max-h-[320px] w-full object-cover" />
+          <div className="flex justify-center">
+            {/* Local data URLs and arbitrary remote URLs make next/image a poor fit here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt={alt || "Email image"} className="block max-w-full" style={style} />
+          </div>
         ) : (
           <div className="grid min-h-[220px] place-items-center px-6 py-10 text-center">
             <div className="grid gap-3">
@@ -2069,16 +2158,29 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
               </div>
               <div className="grid gap-1">
                 <p className="text-sm font-medium text-slate-900">Drop an image here</p>
-                <p className="text-xs text-muted-foreground">or upload a file from your device</p>
+                <p className="text-xs text-muted-foreground">{isUploading ? "Uploading..." : "Drop an image or add one from settings."}</p>
               </div>
               {!disabled ? (
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex justify-center">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
+                    className="shadow-sm"
                     disabled={isUploading}
-                    onClick={() => inputRef.current?.click()}
+                    onClick={async (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = async () => {
+                        const file = input.files?.[0];
+                        await handleFile(file);
+                      };
+                      input.click();
+                    }}
                   >
                     {isUploading ? "Uploading..." : "Upload image"}
                   </Button>
@@ -2087,37 +2189,10 @@ function ImageBlockEditor({ imageUrl, alt, disabled, onImageUrlChange }: ImageBl
             </div>
           </div>
         )}
-        {!disabled && imageUrl ? (
-          <div className="absolute right-3 top-3">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="shadow-sm"
-              disabled={isUploading}
-              onClick={() => inputRef.current?.click()}
-            >
-              Replace image
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       <div className="grid gap-2">
         {alt ? <p className="text-sm text-slate-700">{alt}</p> : null}
-        {!disabled ? (
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              await handleFile(file);
-            }}
-          />
-        ) : null}
       </div>
     </div>
   );
@@ -2447,34 +2522,7 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
         </div>
       </Card>
 
-      {block.type === "image" ? (
-        <Card className="grid gap-4 p-4">
-          <div className="grid gap-1">
-            <p className="text-sm font-semibold text-slate-900">Image</p>
-            <p className="text-xs text-muted-foreground">Source and accessibility details.</p>
-          </div>
-          <InputField
-            label="Alt text"
-            value={block.alt}
-            onChange={(value) =>
-              onUpdate((current) => ({
-                ...current,
-                alt: value,
-              }))
-            }
-          />
-          <InputField
-            label="Image URL"
-            value={block.imageUrl}
-            onChange={(value) =>
-              onUpdate((current) => ({
-                ...current,
-                imageUrl: value,
-              }))
-            }
-          />
-        </Card>
-      ) : null}
+      {block.type === "image" ? <ImageSettingsPanel block={block} onUpdate={onUpdate} /> : null}
 
       {block.type === "button" ? (
         <Card className="grid gap-4 p-4">
@@ -2593,6 +2641,273 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+function ImageSettingsPanel({
+  block,
+  onUpdate,
+}: {
+  block: Extract<EmailBlock, { type: "image" }>;
+  onUpdate: (updater: (block: EmailBlock) => EmailBlock) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const previewSrc = block.sourceType === "url" ? (block.imageUrl ?? "") : (block.uploadedImageData ?? "");
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const dataUrl = await readImageFileAsDataUrl(file);
+      onUpdate((current) =>
+        current.type === "image"
+          ? {
+              ...current,
+              sourceType: "upload",
+              uploadedImageData: dataUrl,
+            imageUrl: null,
+            }
+          : current,
+      );
+      toast.success("Image uploaded");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to upload image";
+      toast.error("Upload failed", { description: message });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <Card className="grid gap-4 p-4">
+      <div className="grid gap-1">
+        <p className="text-sm font-semibold text-slate-900">Image</p>
+        <p className="text-xs text-muted-foreground">Source, size, fit and accessibility details.</p>
+      </div>
+      <div className="grid gap-3">
+        <span className="text-sm font-medium text-slate-900">Source</span>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={block.sourceType === "upload" ? "secondary" : "outline"}
+            onClick={() =>
+              onUpdate((current) =>
+                current.type === "image"
+                  ? {
+                      ...current,
+                      sourceType: "upload",
+                    }
+                  : current,
+              )
+            }
+          >
+            Upload
+          </Button>
+          <Button
+            type="button"
+            variant={block.sourceType === "url" ? "secondary" : "outline"}
+            onClick={() =>
+              onUpdate((current) =>
+                current.type === "image"
+                  ? {
+                      ...current,
+                      sourceType: "url",
+                    }
+                  : current,
+              )
+            }
+          >
+            Image URL
+          </Button>
+        </div>
+        {block.sourceType === "url" ? (
+          <InputField
+            label="Image URL"
+            value={block.imageUrl ?? ""}
+            placeholder="https://"
+            onChange={(value) =>
+              onUpdate((current) =>
+                current.type === "image"
+                  ? {
+                      ...current,
+                      imageUrl: value || null,
+                    }
+                  : current,
+              )
+            }
+          />
+        ) : (
+          <div className="grid gap-2">
+            <span className="text-sm font-medium text-slate-900">Uploaded file</span>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" disabled={isUploading} onClick={() => inputRef.current?.click()}>
+                {isUploading ? "Uploading..." : previewSrc ? "Replace image" : "Upload image"}
+              </Button>
+              {previewSrc ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    onUpdate((current) =>
+                      current.type === "image"
+                        ? {
+                            ...current,
+                            uploadedImageData: null,
+                          }
+                        : current,
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                await handleFile(file);
+              }}
+            />
+          </div>
+        )}
+        <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+          {previewSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={previewSrc} alt={block.alt || "Image preview"} className="h-28 w-full object-contain bg-white" />
+          ) : (
+            <div className="grid h-28 place-items-center text-xs text-muted-foreground">No image selected</div>
+          )}
+        </div>
+      </div>
+      <InputField
+        label="Alt text"
+        value={block.alt}
+        onChange={(value) =>
+          onUpdate((current) =>
+            current.type === "image"
+              ? {
+                  ...current,
+                  alt: value,
+                }
+              : current,
+          )
+        }
+      />
+      <div className="grid gap-4">
+        <div className="grid gap-1">
+          <p className="text-sm font-medium text-slate-900">Sizing</p>
+          <p className="text-xs text-muted-foreground">Control the image dimensions and fit.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField
+            label="Width"
+            value={block.width === "full" ? "full" : "pixels"}
+            options={[
+              { label: "100%", value: "full" },
+              { label: "Pixels", value: "pixels" },
+            ]}
+            onChange={(value) =>
+              onUpdate((current) =>
+                current.type === "image"
+                  ? {
+                      ...current,
+                      width: value === "full" ? "full" : typeof current.width === "number" ? current.width : 600,
+                    }
+                  : current,
+              )
+            }
+          />
+          {block.width === "full" ? (
+            <div />
+          ) : (
+            <NumberField
+              label="Width px"
+              value={typeof block.width === "number" ? block.width : undefined}
+              onChange={(value) =>
+                onUpdate((current) =>
+                  current.type === "image"
+                    ? {
+                        ...current,
+                        width: value ?? 600,
+                      }
+                    : current,
+                )
+              }
+            />
+          )}
+          <SelectField
+            label="Height"
+            value={block.height ? "pixels" : "auto"}
+            options={[
+              { label: "Auto", value: "auto" },
+              { label: "Pixels", value: "pixels" },
+            ]}
+            onChange={(value) =>
+              onUpdate((current) =>
+                current.type === "image"
+                  ? {
+                      ...current,
+                      height: value === "auto" ? null : current.height ?? 320,
+                    }
+                  : current,
+              )
+            }
+          />
+          {block.height ? (
+            <NumberField
+              label="Height px"
+              value={block.height}
+              onChange={(value) =>
+                onUpdate((current) =>
+                  current.type === "image"
+                    ? {
+                        ...current,
+                        height: value ?? 320,
+                      }
+                    : current,
+                )
+              }
+            />
+          ) : (
+            <div />
+          )}
+        </div>
+        <SelectField
+          label="Fit"
+          value={block.fit}
+          options={[
+            { label: "Cover", value: "cover" },
+            { label: "Contain", value: "contain" },
+            { label: "Fill", value: "fill" },
+          ]}
+          onChange={(value) =>
+            onUpdate((current) =>
+              current.type === "image"
+                ? {
+                    ...current,
+                    fit: value as "cover" | "contain" | "fill",
+                  }
+                : current,
+            )
+          }
+        />
+      </div>
+    </Card>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Eye, EyeOff, Save, Send, Smartphone } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Eye, EyeOff, Redo2, Save, Send, Smartphone, Undo2 } from "lucide-react";
 import { createCampaignRequestSchema, type CampaignDetail, type CreateCampaignRequest, type SendCampaignRequest } from "@repo/api-contracts";
 import { BackButton } from "@/components/navigation/BackButton";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +18,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FormField } from "@/components/forms/FormField";
+import { useUndoRedoState } from "@/hooks/useUndoRedoState";
 
 type SmsCampaignWorkspaceProps = {
   mode: "create" | "edit";
   onBack: () => void;
   onSave: (request: CreateCampaignRequest) => Promise<string>;
+  onUpdateDraft?: (campaignId: string, request: CreateCampaignRequest) => Promise<void>;
   onSend?: (request: SendCampaignRequest) => Promise<void>;
   submitLabel: string;
   initialCampaign?: Partial<CampaignDetail>;
@@ -37,6 +39,11 @@ type SmsFormState = {
   contentText: string;
 };
 
+type SmsEditorState = {
+  form: SmsFormState;
+  recipientSelection: CreateCampaignRequest["recipientSelection"];
+};
+
 function createSnapshot(state: SmsFormState, recipientSelection: CreateCampaignRequest["recipientSelection"]) {
   return JSON.stringify({ ...state, recipientSelection });
 }
@@ -45,6 +52,7 @@ export function SmsCampaignWorkspace({
   mode,
   onBack,
   onSave,
+  onUpdateDraft,
   onSend,
   submitLabel,
   initialCampaign,
@@ -52,14 +60,15 @@ export function SmsCampaignWorkspace({
   campaignStatus = "DRAFT",
   initialScheduledAt,
 }: SmsCampaignWorkspaceProps) {
-  const [form, setForm] = useState<SmsFormState>({
-    name: initialCampaign?.name ?? "",
-    previewText: initialCampaign?.previewText ?? "",
-    contentText: initialCampaign?.contentText ?? "",
-  });
-  const [recipientSelection, setRecipientSelection] = useState<CreateCampaignRequest["recipientSelection"]>(
-    initialCampaign?.recipientSelection ?? { type: "ALL" },
-  );
+  const initialEditorState: SmsEditorState = {
+    form: {
+      name: initialCampaign?.name ?? "",
+      previewText: initialCampaign?.previewText ?? "",
+      contentText: initialCampaign?.contentText ?? "",
+    },
+    recipientSelection: initialCampaign?.recipientSelection ?? { type: "ALL" },
+  };
+  const { state: editorState, setState: setEditorState, canUndo, canRedo, undo, redo } = useUndoRedoState(initialEditorState);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -69,7 +78,10 @@ export function SmsCampaignWorkspace({
     const seed = initialScheduledAt ?? scheduledAt;
     return seed ? new Date(seed).toISOString().slice(0, 16) : "";
   });
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(initialCampaign?.id ?? null);
 
+  const form = editorState.form;
+  const recipientSelection = editorState.recipientSelection;
   const savedSnapshotRef = useRef(createSnapshot(form, recipientSelection));
   const hasUnsavedChanges = createSnapshot(form, recipientSelection) !== savedSnapshotRef.current;
 
@@ -91,11 +103,41 @@ export function SmsCampaignWorkspace({
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedChanges]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      if (event.metaKey || event.ctrlKey) {
+        if (key === "z") {
+          event.preventDefault();
+          if (event.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+          return;
+        }
+
+        if (key === "y") {
+          event.preventDefault();
+          redo();
+        }
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [redo, undo]);
+
   const updateField = (field: keyof SmsFormState, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
+    setEditorState((current) => ({
+      ...current,
+      form: { ...current.form, [field]: value },
+    }));
   };
 
-  const buildPayload = (): CreateCampaignRequest =>
+  const buildPayload = useCallback((): CreateCampaignRequest =>
     createCampaignRequestSchema.parse({
       name: form.name,
       channel: "SMS",
@@ -104,26 +146,49 @@ export function SmsCampaignWorkspace({
       contentHtml: form.contentText.trim() ? `<p>${escapeHtml(form.contentText.trim())}</p>` : "",
       contentText: form.contentText,
       recipientSelection,
-    });
+    }), [form, recipientSelection]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!form.name.trim()) {
-      toast.error("Campaign name is required");
+      if (!silent) {
+        toast.error("Campaign name is required");
+      }
       return;
     }
     try {
       setIsSaving(true);
       const payload = buildPayload();
-      await onSave(payload);
+      if (!activeCampaignId) {
+        const createdId = await onSave(payload);
+        setActiveCampaignId(createdId);
+      } else if (onUpdateDraft) {
+        await onUpdateDraft(activeCampaignId, payload);
+      } else {
+        await onSave(payload);
+      }
       savedSnapshotRef.current = createSnapshot(form, recipientSelection);
-      toast.success(mode === "create" ? "Campaign draft saved" : "Campaign updated");
+      if (!silent) {
+        toast.success(mode === "create" ? "Campaign draft saved" : "Campaign updated");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save campaign";
-      toast.error("Save failed", { description: message });
+      toast.error(silent ? "Autosave failed" : "Save failed", { description: message });
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [activeCampaignId, buildPayload, form, mode, onSave, onUpdateDraft, recipientSelection]);
+
+  useEffect(() => {
+    if ((!activeCampaignId && mode === "create") || !hasUnsavedChanges || isSaving || !form.name.trim() || !form.contentText.trim()) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void handleSave({ silent: true });
+    }, 30000);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeCampaignId, form.contentText, form.name, form.previewText, handleSave, hasUnsavedChanges, isSaving, mode, recipientSelection]);
 
   const handleSend = async () => {
     if (!onSend) return;
@@ -193,7 +258,13 @@ export function SmsCampaignWorkspace({
             <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
               {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
             </Badge>
-            <Button type="button" onClick={handleSave} disabled={isSaving || !hasUnsavedChanges}>
+            <Button type="button" variant="outline" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo">
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo">
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !hasUnsavedChanges}>
               <Save className="mr-2 h-4 w-4" />
               {isSaving ? "Saving..." : submitLabel}
             </Button>
@@ -311,7 +382,12 @@ export function SmsCampaignWorkspace({
               <span className="text-sm font-medium text-slate-900">Who</span>
               <select
                 value={recipientSelection.type}
-                onChange={() => setRecipientSelection({ type: "ALL" })}
+                onChange={() =>
+                  setEditorState((current) => ({
+                    ...current,
+                    recipientSelection: { type: "ALL" },
+                  }))
+                }
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="ALL">All contacts</option>

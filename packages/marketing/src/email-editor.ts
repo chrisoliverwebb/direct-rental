@@ -58,10 +58,14 @@ export const createEmailBlock = (type: EmailBlockType): EmailBlock => {
       return {
         id: createBlockId("image"),
         type: "image",
-        imageUrl: "",
+        sourceType: "upload",
+        imageUrl: null,
+        uploadedImageData: null,
         alt: "",
         href: null,
         width: "full",
+        height: null,
+        fit: "cover",
       };
     case "button":
       return {
@@ -290,7 +294,7 @@ function renderBlockToText(block: EmailBlock): string {
     case "header":
       return [block.title.text, block.subtitle.text].filter(Boolean).join(" ");
     case "image":
-      return block.alt || block.imageUrl;
+      return block.alt || block.imageUrl || "";
     case "button":
       return block.label.text;
     case "spacer":
@@ -334,8 +338,14 @@ function renderBlockStyles(styles: EmailBlock["styles"]) {
 }
 
 function renderImage(block: EmailImageBlock) {
+  const src = block.sourceType === "url" ? block.imageUrl : block.uploadedImageData;
+  if (!src) {
+    return "";
+  }
+
   const width = block.width === "full" ? "100%" : `${block.width}px`;
-  const img = `<img src="${escapeAttr(block.imageUrl)}" alt="${escapeAttr(block.alt)}" style="display:block;width:${width};max-width:100%;height:auto;" />`;
+  const height = block.height ? `${block.height}px` : "auto";
+  const img = `<img src="${escapeAttr(src)}" alt="${escapeAttr(block.alt)}" style="display:block;width:${width};max-width:100%;height:${height};object-fit:${escapeAttr(block.fit)};" />`;
 
   if (!block.href) {
     return img;

@@ -231,14 +231,18 @@ function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   try {
     const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw) as T[];
-  } catch {}
+  } catch {
+    return fallback;
+  }
   return fallback;
 }
 
 function persist(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+  } catch {
+    return;
+  }
 }
 
 let contacts = [...seededContacts];
@@ -597,5 +601,7 @@ export const resetMarketingState = () => {
   try {
     localStorage.removeItem(STORAGE_KEY_DRAFTS);
     localStorage.removeItem(STORAGE_KEY_BLOCKS);
-  } catch {}
+  } catch {
+    return;
+  }
 };

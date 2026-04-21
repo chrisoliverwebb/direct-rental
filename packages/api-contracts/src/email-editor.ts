@@ -54,10 +54,14 @@ export type EmailHeaderBlock = z.infer<typeof emailHeaderBlockSchema>;
 
 export const emailImageBlockSchema = emailBaseBlockSchema.extend({
   type: z.literal("image"),
-  imageUrl: z.string().trim(),
+  sourceType: z.enum(["upload", "url"]).default("upload"),
+  imageUrl: z.string().trim().nullable().optional(),
+  uploadedImageData: z.string().trim().nullable().optional(),
   alt: z.string().trim(),
   href: z.string().trim().nullable().optional(),
-  width: z.union([z.literal("full"), z.number().int().min(1)]),
+  width: z.union([z.literal("full"), z.number().int().min(1)]).default("full"),
+  height: z.number().int().min(1).nullable().optional(),
+  fit: z.enum(["cover", "contain", "fill"]).default("cover"),
 });
 
 export type EmailImageBlock = z.infer<typeof emailImageBlockSchema>;
