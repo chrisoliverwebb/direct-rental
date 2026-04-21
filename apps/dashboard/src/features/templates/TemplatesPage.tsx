@@ -132,21 +132,17 @@ function EmailTemplateCard({
               <CardTitle className="text-lg">{template.name}</CardTitle>
             </div>
             <CardDescription className="max-w-2xl">{template.description}</CardDescription>
-            <div className="grid gap-1 rounded-lg bg-slate-50 px-3 py-2">
-              {template.subject ? <p className="text-sm font-medium text-slate-900">{template.subject}</p> : null}
-              {template.previewText ? <p className="text-sm text-slate-500">{template.previewText}</p> : null}
-            </div>
           </div>
           <div className="shrink-0">
             <Button type="button" size="sm" onClick={onCreate}>
-              Create with template
+              Use this template
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-5">
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-          <div className="max-h-[420px] overflow-y-auto p-4">
+          <div className="p-4">
             <div
               className={cn(
                 "mx-auto max-w-[600px] overflow-hidden border border-slate-200 bg-white shadow-sm",
@@ -178,21 +174,18 @@ function SmsTemplateCard({
               <CardTitle className="text-lg">{template.name}</CardTitle>
             </div>
             <CardDescription className="max-w-2xl">{template.description}</CardDescription>
-            {template.previewText ? (
-              <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">{template.previewText}</div>
-            ) : null}
           </div>
           <div className="shrink-0">
             <Button type="button" size="sm" onClick={onCreate}>
-              Create with template
+              Use this template
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="max-h-[320px] overflow-y-auto rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="mb-3 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="grid gap-3 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between text-[11px] text-slate-400">
               <span>Messages</span>
               <span>Now</span>
             </div>

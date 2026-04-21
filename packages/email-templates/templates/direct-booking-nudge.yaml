@@ -1,7 +1,13 @@
 name: Direct booking nudge
 channel: SMS
 description: A short follow-up SMS for guests who have already shown interest and just need a clear next step.
-subject: null
+category: follow-up
+tags:
+  - direct-booking
+  - warm-lead
+  - follow-up
 previewText: A clear direct-booking nudge for warm leads.
-thumbnailUrl: null
-contentText: Thanks for your interest. We can hold your preferred dates for a short time if you would like to book direct.
+audience: all
+goal: engage
+starterContent:
+  text: Thanks for your interest. We can hold your preferred dates for a short time if you would like to book direct.

@@ -1,102 +1,20 @@
 name: Repeat guest discount
 channel: EMAIL
 description: A cleaner loyalty-style email with a simple intro, offer section, and CTA-led close.
+category: loyalty
+tags:
+  - repeat-guests
+  - loyalty
+  - offer
 subject: A thank-you discount for returning guests
 previewText: A simple win-back campaign for your guest list.
-thumbnailUrl: null
-contentDocument:
-  name: Repeat guest discount
-  subject: A thank-you discount for returning guests
-  previewText: A simple win-back campaign for your guest list.
-  blocks:
-    - type: group
-      styles:
-        paddingTop: 32
-        paddingRight: 32
-        paddingBottom: 24
-        paddingLeft: 32
-      blocks:
-        - type: text
-          textStyle: h1
-          styles:
-            fontFamily: Arial, sans-serif
-            fontSize: 32px
-            fontWeight: "700"
-            lineHeight: "1.2"
-            textColor: "#0f172a"
-            paddingTop: 0
-            paddingRight: 0
-            paddingBottom: 14
-            paddingLeft: 0
-          content:
-            text: Thank you for staying with us before.
-        - type: text
-          textStyle: p
-          styles:
-            fontFamily: Arial, sans-serif
-            fontSize: 16px
-            fontWeight: "400"
-            lineHeight: "1.7"
-            textColor: "#334155"
-            paddingTop: 0
-            paddingRight: 0
-            paddingBottom: 20
-            paddingLeft: 0
-          content:
-            text: This template is designed for a simple loyalty message. Keep the copy personal, remind guests why they enjoyed the stay, and make the direct-booking benefit feel genuinely useful.
-        - type: group
-          styles:
-            backgroundColor: "#f8fafc"
-            borderRadius: 16
-            paddingTop: 18
-            paddingRight: 18
-            paddingBottom: 18
-            paddingLeft: 18
-          blocks:
-            - type: text
-              textStyle: h3
-              styles:
-                fontFamily: Arial, sans-serif
-                fontSize: 18px
-                fontWeight: "700"
-                lineHeight: "1.4"
-                textColor: "#0f172a"
-                paddingTop: 0
-                paddingRight: 0
-                paddingBottom: 8
-                paddingLeft: 0
-              content:
-                text: Your returning guest offer
-            - type: text
-              textStyle: p
-              styles:
-                fontFamily: Arial, sans-serif
-                fontSize: 15px
-                fontWeight: "400"
-                lineHeight: "1.7"
-                textColor: "#475569"
-                paddingTop: 0
-                paddingRight: 0
-                paddingBottom: 0
-                paddingLeft: 0
-              content:
-                text: Add a single direct incentive here, such as a returning guest rate, early access window, or welcome extra.
-        - type: spacer
-          height: 20
-        - type: button
-          alignment: left
-          buttonBackgroundColor: "#0f172a"
-          buttonTextColor: "#ffffff"
-          href: https://directrental.test/returning-guests
-          styles:
-            fontFamily: Arial, sans-serif
-            fontSize: 15px
-            fontWeight: "700"
-            lineHeight: "1.2"
-            textAlign: center
-            paddingTop: 0
-            paddingRight: 0
-            paddingBottom: 0
-            paddingLeft: 0
-          label:
-            text: Book direct as a returning guest
+layoutId: loyalty-offer
+audience: past-guests
+goal: rebook
+starterContent:
+  headline: Thank you for staying with us before.
+  intro: This template is designed for a simple loyalty message. Keep the copy personal, remind guests why they enjoyed the stay, and make the direct-booking benefit feel genuinely useful.
+  offerTitle: Your returning guest offer
+  offerBody: Add a single direct incentive here, such as a returning guest rate, early access window, or welcome extra.
+  ctaLabel: Book direct as a returning guest
+  ctaUrl: https://directrental.test/returning-guests
