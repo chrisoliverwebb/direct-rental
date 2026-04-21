@@ -33,12 +33,12 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <aside className="border-b bg-white px-5 py-6 lg:fixed lg:inset-y-0 lg:left-0 lg:w-[260px] lg:border-b-0 lg:border-r">
+      <aside className="border-b bg-white px-5 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:w-[260px] lg:border-b-0 lg:border-r">
         <div className="mx-auto lg:flex lg:h-full lg:flex-col">
-          <div className="mb-10">
+          <div className="mb-8 flex min-h-10 items-center">
             <DirectRentalLockup
-              titleClassName="text-xs text-primary"
-              className="items-start"
+              className="items-start justify-center"
+              logoClassName="h-5"
             />
           </div>
           <nav className="grid gap-1">
