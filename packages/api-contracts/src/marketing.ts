@@ -291,8 +291,12 @@ export const templateSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   channel: campaignChannelSchema,
+  description: z.string(),
   subject: z.string().nullable(),
   previewText: z.string().nullable(),
+  contentHtml: z.string().trim().min(1),
+  contentText: z.string().trim().min(1),
+  contentDocument: emailDocumentSchema.nullable().optional(),
   thumbnailUrl: z.string().nullable(),
 });
 

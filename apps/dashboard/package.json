@@ -21,6 +21,7 @@
     "@repo/api-contracts": "*",
     "@repo/auth": "*",
     "@repo/brand": "*",
+    "@repo/email-templates": "*",
     "@repo/marketing": "*",
     "@repo/shared": "*",
     "@tanstack/react-query": "^5.90.3",

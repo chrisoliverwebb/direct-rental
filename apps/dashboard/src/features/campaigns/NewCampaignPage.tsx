@@ -5,8 +5,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { CampaignChannelDialog } from "@/features/campaigns/CampaignChannelDialog";
 import { EmailCampaignWorkspace } from "@/features/campaigns/EmailCampaignWorkspace";
 import { SmsCampaignWorkspace } from "@/features/campaigns/SmsCampaignWorkspace";
-import { useCreateCampaign, useDraftCampaigns } from "@/features/marketing/hooks";
-import type { DraftCampaignSummary } from "@repo/api-contracts";
+import { useCreateCampaign, useDraftCampaigns, useTemplates } from "@/features/marketing/hooks";
+import type { DraftCampaignSummary, TemplateSummary } from "@repo/api-contracts";
 
 export function NewCampaignPage() {
   const router = useRouter();
@@ -14,9 +14,23 @@ export function NewCampaignPage() {
   const createCampaignMutation = useCreateCampaign();
 
   const channel = normalizeChannel(searchParams.get("channel"));
+  const templateId = searchParams.get("templateId");
   const scheduledAt = searchParams.get("scheduledAt") ?? undefined;
   const draftCampaignsQuery = useDraftCampaigns();
+  const templatesQuery = useTemplates();
   const defaultName = generateDefaultName(draftCampaignsQuery.data?.items ?? []);
+  const template = templateId ? templatesQuery.data?.items.find((item) => item.id === templateId) : undefined;
+  const resolvedChannel = channel ?? normalizeTemplateChannel(template?.channel);
+  const initialCampaign = template
+    ? {
+        name: template.name,
+        channel: template.channel,
+        subject: template.subject,
+        previewText: template.previewText,
+        contentText: template.contentText,
+        contentDocument: template.contentDocument ?? null,
+      }
+    : { name: defaultName };
 
   return (
     <div className="grid gap-6">
@@ -32,11 +46,11 @@ export function NewCampaignPage() {
         }}
       />
 
-      {channel === "EMAIL" ? (
+      {resolvedChannel === "EMAIL" ? (
         <EmailCampaignWorkspace
           mode="create"
           scheduledAt={scheduledAt}
-          initialCampaign={{ name: defaultName }}
+          initialCampaign={initialCampaign}
           onBack={() => router.push("/campaigns")}
           submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
           onSave={async (values) => {
@@ -44,11 +58,11 @@ export function NewCampaignPage() {
             return result.id;
           }}
         />
-      ) : channel === "SMS" ? (
+      ) : resolvedChannel === "SMS" ? (
         <SmsCampaignWorkspace
           mode="create"
           scheduledAt={scheduledAt}
-          initialCampaign={{ name: defaultName }}
+          initialCampaign={initialCampaign}
           onBack={() => router.push("/campaigns")}
           submitLabel={createCampaignMutation.isPending ? "Saving..." : "Save Draft"}
           onSave={async (values) => {
@@ -73,6 +87,10 @@ export function NewCampaignPage() {
 }
 
 function normalizeChannel(value: string | null) {
+  return value === "EMAIL" || value === "SMS" ? value : null;
+}
+
+function normalizeTemplateChannel(value: TemplateSummary["channel"] | undefined) {
   return value === "EMAIL" || value === "SMS" ? value : null;
 }
 

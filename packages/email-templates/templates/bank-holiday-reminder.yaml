@@ -1,0 +1,7 @@
+name: Bank holiday reminder
+channel: SMS
+description: A concise SMS reminder for fast-moving availability around a long weekend.
+subject: null
+previewText: Short reminder for upcoming long weekends.
+thumbnailUrl: null
+contentText: Bank holiday dates are nearly gone. If you want first choice, reply or book direct today.

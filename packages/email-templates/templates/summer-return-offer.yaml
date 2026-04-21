@@ -1,0 +1,102 @@
+name: Summer return offer
+channel: EMAIL
+description: A warmer repeat-stay template with a strong title, persuasive body copy, and a second supporting section.
+subject: A summer return-guest offer
+previewText: Encourage repeat bookings with a direct-only incentive.
+thumbnailUrl: null
+contentDocument:
+  name: Summer return offer
+  subject: A summer return-guest offer
+  previewText: Encourage repeat bookings with a direct-only incentive.
+  blocks:
+    - type: group
+      styles:
+        backgroundColor: "#fff7ed"
+        paddingTop: 30
+        paddingRight: 30
+        paddingBottom: 30
+        paddingLeft: 30
+      blocks:
+        - type: text
+          textStyle: h1
+          styles:
+            fontFamily: Georgia, serif
+            fontSize: 36px
+            fontWeight: "700"
+            lineHeight: "1.15"
+            textColor: "#7c2d12"
+            paddingTop: 0
+            paddingRight: 0
+            paddingBottom: 14
+            paddingLeft: 0
+          content:
+            text: A summer stay, reserved for returning guests.
+        - type: text
+          textStyle: p
+          styles:
+            fontFamily: Arial, sans-serif
+            fontSize: 16px
+            fontWeight: "400"
+            lineHeight: "1.75"
+            textColor: "#7c2d12"
+            paddingTop: 0
+            paddingRight: 0
+            paddingBottom: 18
+            paddingLeft: 0
+          content:
+            text: We are opening a limited summer window for past guests first. Keep the tone generous, make the direct value clear, and give one simple action to take next.
+        - type: button
+          alignment: left
+          buttonBackgroundColor: "#ea580c"
+          buttonTextColor: "#ffffff"
+          href: https://directrental.test/offers/summer
+          styles:
+            fontFamily: Arial, sans-serif
+            fontSize: 15px
+            fontWeight: "700"
+            lineHeight: "1.2"
+            textAlign: center
+            paddingTop: 0
+            paddingRight: 0
+            paddingBottom: 0
+            paddingLeft: 0
+          label:
+            text: See summer availability
+    - type: divider
+      color: "#fdba74"
+      thickness: 1
+    - type: group
+      styles:
+        paddingTop: 22
+        paddingRight: 30
+        paddingBottom: 18
+        paddingLeft: 30
+      blocks:
+        - type: text
+          textStyle: h3
+          styles:
+            fontFamily: Arial, sans-serif
+            fontSize: 18px
+            fontWeight: "700"
+            lineHeight: "1.4"
+            textColor: "#0f172a"
+            paddingTop: 0
+            paddingRight: 0
+            paddingBottom: 10
+            paddingLeft: 0
+          content:
+            text: What to highlight
+        - type: text
+          textStyle: p
+          styles:
+            fontFamily: Arial, sans-serif
+            fontSize: 15px
+            fontWeight: "400"
+            lineHeight: "1.7"
+            textColor: "#475569"
+            paddingTop: 0
+            paddingRight: 0
+            paddingBottom: 0
+            paddingLeft: 0
+          content:
+            text: "Use this section for one or two concrete reasons to book direct now: ideal dates, returning guest pricing, or a direct-only inclusion."

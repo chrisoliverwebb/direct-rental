@@ -17,7 +17,10 @@ import type {
   TemplateSummary,
 } from "@repo/api-contracts";
 import { createContactRequestSchema } from "@repo/api-contracts";
-import { createEmailDocumentFromCampaignContent } from "@repo/marketing";
+import { templateLibrary } from "@repo/email-templates";
+import {
+  createEmailDocumentFromCampaignContent,
+} from "@repo/marketing";
 import { createId, sortByCreatedAtDesc } from "@repo/shared";
 
 type LiveCampaign = Extract<CampaignDetail, { status: "SCHEDULED" | "SENT" }>;
@@ -189,40 +192,7 @@ const seededCampaigns: LiveCampaign[] = [
   },
 ];
 
-const seededTemplates: TemplateSummary[] = [
-  {
-    id: "template_001",
-    name: "Last minute availability",
-    channel: "EMAIL",
-    subject: "A last minute stay has opened up",
-    previewText: "Give recent guests first refusal on unexpected availability.",
-    thumbnailUrl: null,
-  },
-  {
-    id: "template_002",
-    name: "Summer return offer",
-    channel: "EMAIL",
-    subject: "A summer return-guest offer",
-    previewText: "Encourage repeat bookings with a direct-only incentive.",
-    thumbnailUrl: null,
-  },
-  {
-    id: "template_003",
-    name: "Bank holiday reminder",
-    channel: "SMS",
-    subject: null,
-    previewText: "Short reminder for upcoming long weekends.",
-    thumbnailUrl: null,
-  },
-  {
-    id: "template_004",
-    name: "Repeat guest discount",
-    channel: "EMAIL",
-    subject: "A thank-you discount for returning guests",
-    previewText: "A simple win-back campaign for your guest list.",
-    thumbnailUrl: null,
-  },
-];
+const seededTemplates: TemplateSummary[] = templateLibrary;
 
 const STORAGE_KEY_DRAFTS = "mock:draftCampaigns";
 const STORAGE_KEY_BLOCKS = "mock:savedBlocks";
