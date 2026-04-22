@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   type ColumnDef,
@@ -9,45 +9,70 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import type { CampaignSummary } from "@repo/api-contracts";
+import type { CampaignSummary, DraftCampaignSummary, TemplateSummary } from "@repo/api-contracts";
 import { campaignStatusLabel, channelLabel, recipientSelectionLabel } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, List, Mail, MessageSquare, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronRightIcon,
+  Mail,
+  MessageSquare,
+  MessageSquareText,
+  Plus,
+  SlidersHorizontal,
+} from "lucide-react";
 import { DataTableColumnHeader } from "@/components/data-table/DataTableColumnHeader";
 import { DataTablePagination } from "@/components/data-table/DataTablePagination";
+import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CampaignChannelDialog } from "@/features/campaigns/CampaignChannelDialog";
+import {
+  filterTemplatesForPropertyCount,
+  getGoalLabel,
+  groupTemplatesByGoal,
+  resolveTemplateScope,
+} from "@/features/campaigns/campaignStarters";
 import { ChannelBadge } from "@/features/campaigns/ChannelBadge";
 import { DraftsList } from "@/features/campaigns/DraftsList";
-import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useCampaigns, useDraftCampaigns } from "@/features/marketing/hooks";
+import { useCampaigns, useDraftCampaigns, useTemplates } from "@/features/marketing/hooks";
+import { useSettings } from "@/features/settings/hooks";
 
 type ChannelFilter = "ALL" | CampaignSummary["channel"];
-type StatusFilter = "ALL" | CampaignSummary["status"];
 type SortDirection = "asc" | "desc";
-type ViewMode = "table" | "calendar";
-const CAMPAIGNS_VIEW_STORAGE_KEY = "direct-rental.campaigns.view-mode";
-const CAMPAIGNS_CALENDAR_MONTH_STORAGE_KEY = "direct-rental.campaigns.calendar-month";
+type CampaignTab = "scheduled" | "sent" | "drafts" | "calendar" | "templates";
+type TemplateLibraryChannelTab = "ALL" | TemplateSummary["channel"];
 
+const CAMPAIGNS_CALENDAR_MONTH_STORAGE_KEY = "direct-rental.campaigns.calendar-month";
+const campaignTabs: Array<{ id: Exclude<CampaignTab, "templates" | "calendar">; label: string }> = [
+  { id: "scheduled", label: "Scheduled" },
+  { id: "sent", label: "Sent" },
+  { id: "drafts", label: "Draft" },
+];
 export function CampaignsPage() {
   const router = useRouter();
-  const [createOpen, setCreateOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const requestedTab = normalizeTab(searchParams.get("tab"));
+  const [activeTab, setActiveTab] = useState<CampaignTab>(requestedTab);
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("ALL");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") return "calendar";
-    const stored = window.localStorage.getItem(CAMPAIGNS_VIEW_STORAGE_KEY);
-    return stored === "table" || stored === "calendar" ? stored : "calendar";
-  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
-  const [draftsOpen, setDraftsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createStep, setCreateStep] = useState<"channel" | "template">("channel");
+  const [createChannel, setCreateChannel] = useState<TemplateLibraryChannelTab | null>(null);
+  const [createScheduledAt, setCreateScheduledAt] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [templateFiltersOpen, setTemplateFiltersOpen] = useState(false);
+  const [templateLibraryChannel, setTemplateLibraryChannel] = useState<TemplateLibraryChannelTab>("ALL");
   const [calendarMonth, setCalendarMonth] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem(CAMPAIGNS_CALENDAR_MONTH_STORAGE_KEY);
@@ -61,11 +86,21 @@ export function CampaignsPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const draftCampaignsQuery = useDraftCampaigns();
+  const templatesQuery = useTemplates();
+  const settingsQuery = useSettings();
+  const propertyCount = settingsQuery.data?.properties.filter((property) => property.status === "ACTIVE").length ?? 0;
+  useEffect(() => {
+    setActiveTab(requestedTab);
+  }, [requestedTab]);
+
+  const effectiveStatusFilter =
+    activeTab === "scheduled" ? "SCHEDULED" : activeTab === "sent" ? "SENT" : activeTab === "drafts" ? "DRAFT" : undefined;
+
   const campaignsQuery = useCampaigns({
     page,
     pageSize,
     channel: channelFilter === "ALL" ? undefined : channelFilter,
-    status: statusFilter === "ALL" ? undefined : statusFilter,
+    status: effectiveStatusFilter,
     sortDirection,
   });
 
@@ -73,10 +108,6 @@ export function CampaignsPage() {
   const totalPages = campaignsQuery.data?.totalPages ?? 1;
   const totalItems = campaignsQuery.data?.totalItems ?? 0;
   const scheduledCount = useMemo(() => items.filter((c) => c.status === "SCHEDULED").length, [items]);
-
-  useEffect(() => {
-    window.localStorage.setItem(CAMPAIGNS_VIEW_STORAGE_KEY, viewMode);
-  }, [viewMode]);
 
   useEffect(() => {
     const key = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, "0")}`;
@@ -127,7 +158,7 @@ export function CampaignsPage() {
             onToggle={() => setSortDirection((current) => (current === "desc" ? "asc" : "desc"))}
           />
         ),
-        cell: ({ row }) => formatDateTime(row.original.sentAt ?? row.original.scheduledAt),
+        cell: ({ row }) => formatDateTime(row.original.sentAt ?? row.original.scheduledAt ?? row.original.createdAt),
       },
     ],
     [sortDirection],
@@ -142,302 +173,703 @@ export function CampaignsPage() {
   });
 
   const resetToFirstPage = () => setPage(1);
+  const openCreateFlow = (options?: { scheduledAt?: string; channel?: TemplateLibraryChannelTab | null }) => {
+    setCreateScheduledAt(options?.scheduledAt ?? null);
+    setCreateChannel(options?.channel ?? null);
+    setCreateStep(options?.channel ? "template" : "channel");
+    setCreateOpen(true);
+  };
+  const pageTitle = activeTab === "templates" ? "Template library" : "Campaigns";
+  const pageDescription =
+    activeTab === "templates"
+      ? "Browse ready-made campaign starters for email and SMS."
+      : activeTab === "calendar"
+        ? "View your scheduled and sent campaigns on the calendar."
+        : "Review scheduled sends, sent campaigns, and drafts.";
+  const switchTab = (tab: CampaignTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`/campaigns?${params.toString()}`);
+  };
 
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Campaigns</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Scheduled and sent campaigns appear here.</p>
+        <div className="grid gap-1">
+          <h1 className="text-2xl font-semibold text-slate-900">{pageTitle}</h1>
+          <p className="text-sm text-muted-foreground">{pageDescription}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {(draftCampaignsQuery.data?.items.length ?? 0) > 0 ? (
-            <Button type="button" variant="outline" onClick={() => setDraftsOpen(true)}>
-              Drafts
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
-                {draftCampaignsQuery.data?.items.length}
-              </Badge>
-            </Button>
-          ) : null}
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            Create campaign
+        {activeTab === "templates" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => setTemplateFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Filters
+            <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-[10px]">
+              {templateLibraryChannel === "ALL" ? 0 : 1}
+            </Badge>
           </Button>
-        </div>
+        ) : (
+          <Button type="button" onClick={() => openCreateFlow()}>
+            New campaign
+          </Button>
+        )}
       </div>
 
-      <CampaignChannelDialog
+      {activeTab !== "templates" && activeTab !== "calendar" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2">
+          <SegmentedControl
+            options={campaignTabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+            value={activeTab as Exclude<CampaignTab, "templates" | "calendar">}
+            onChange={(value) => switchTab(value)}
+          />
+          <Button
+            type="button"
+            variant={filtersOpen || channelFilter !== "ALL" ? "secondary" : "ghost"}
+            size="sm"
+            className="rounded-lg"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Filters
+            {channelFilter !== "ALL" ? (
+              <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-[10px]">
+                1
+              </Badge>
+            ) : null}
+          </Button>
+        </div>
+      ) : null}
+
+      {activeTab !== "templates" && activeTab !== "calendar" && filtersOpen ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+            <div className="grid gap-0.5">
+              <p className="text-sm font-medium text-slate-900">Filters</p>
+              <p className="text-xs text-slate-500">Refine the current campaign list.</p>
+            </div>
+            {channelFilter !== "ALL" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setChannelFilter("ALL");
+                  resetToFirstPage();
+                }}
+              >
+                Clear filters
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-end gap-3 p-4">
+            <label className="grid gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
+              <select
+                value={channelFilter}
+                onChange={(event) => {
+                  setChannelFilter(event.target.value as ChannelFilter);
+                  resetToFirstPage();
+                }}
+                className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="ALL">All channels</option>
+                <option value="EMAIL">Email</option>
+                <option value="SMS">SMS</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      <CreateCampaignDialog
         open={createOpen}
-        showDrafts={!preselectedDate}
+        step={createStep}
+        selectedChannel={createChannel}
+        propertyCount={propertyCount}
+        templatesQuery={templatesQuery}
+        draftCampaigns={draftCampaignsQuery.data?.items ?? []}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) setPreselectedDate(null);
-        }}
-        onSelectChannel={(channel) => {
-          const params = new URLSearchParams({ channel });
-          if (preselectedDate) {
-            params.set("scheduledAt", preselectedDate.toISOString().split("T")[0]!);
+          if (!open) {
+            setCreateStep("channel");
+            setCreateChannel(null);
+            setCreateScheduledAt(null);
           }
+        }}
+        onViewAllDrafts={() => {
+          setCreateOpen(false);
+          switchTab("drafts");
+        }}
+        onBack={() => setCreateStep("channel")}
+        onSelectChannel={(channel) => {
+          setCreateChannel(channel);
+          setCreateStep("template");
+        }}
+        onSelectTemplate={(template) => {
+          const params = new URLSearchParams({
+            channel: template.channel,
+            templateId: template.id,
+            scope: resolveTemplateScope(template, propertyCount),
+          });
+          if (createScheduledAt) {
+            params.set("scheduledAt", createScheduledAt);
+          }
+          setCreateOpen(false);
           router.push(`/campaigns/new?${params.toString()}`);
         }}
-        draftCampaigns={draftCampaignsQuery.data?.items ?? []}
-        onViewAllDrafts={() => setDraftsOpen(true)}
       />
 
-      <Dialog open={draftsOpen} onOpenChange={setDraftsOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Draft campaigns</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <DraftsList
-              drafts={draftCampaignsQuery.data?.items ?? []}
-              allowDelete
-              onNavigate={() => setDraftsOpen(false)}
+      {activeTab === "templates" ? (
+        <CampaignStarterLibrary
+          propertyCount={propertyCount}
+          selectedChannel={templateLibraryChannel}
+          onSelectChannel={setTemplateLibraryChannel}
+          filtersOpen={templateFiltersOpen}
+          templatesQuery={templatesQuery}
+          onUseTemplate={(template) => {
+            const params = new URLSearchParams({
+              channel: template.channel,
+              templateId: template.id,
+              scope: resolveTemplateScope(template, propertyCount),
+            });
+            router.push(`/campaigns/new?${params.toString()}`);
+          }}
+        />
+      ) : activeTab === "calendar" ? (
+        <>
+          {campaignsQuery.isLoading ? <LoadingState rows={5} /> : null}
+          {campaignsQuery.isError ? (
+            <ErrorState
+              title="Campaigns unavailable"
+              description={campaignsQuery.error.message}
+              onRetry={() => campaignsQuery.refetch()}
             />
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+          ) : null}
 
-      {draftCampaignsQuery.isLoading || campaignsQuery.isLoading ? <LoadingState rows={5} /> : null}
-      {draftCampaignsQuery.isError ? (
-        <ErrorState
-          title="Draft campaigns unavailable"
-          description={draftCampaignsQuery.error.message}
-          onRetry={() => draftCampaignsQuery.refetch()}
-        />
-      ) : null}
-      {campaignsQuery.isError ? (
-        <ErrorState
-          title="Campaigns unavailable"
-          description={campaignsQuery.error.message}
-          onRetry={() => campaignsQuery.refetch()}
-        />
-      ) : null}
-
-      {campaignsQuery.data ? (
-        <Badge variant="secondary" className="h-7 w-fit px-2.5 text-[11px] font-medium">
-          {scheduledCount} scheduled campaign{scheduledCount === 1 ? "" : "s"}
-        </Badge>
-      ) : null}
-
-      <section className="grid gap-3">
-        {campaignsQuery.data ? (
-          <div className="overflow-hidden rounded-lg border bg-white">
-            <div
-              className={
-                viewMode === "calendar"
-                  ? "grid items-center gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
-                  : "flex flex-wrap items-end gap-3 p-4"
-              }
-            >
-              {viewMode === "table" ? (
-                <>
-                  <label className="grid gap-2">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
-                    <select
-                      value={channelFilter}
-                      onChange={(event) => {
-                        setChannelFilter(event.target.value as ChannelFilter);
-                        resetToFirstPage();
-                      }}
-                      className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="ALL">All channels</option>
-                      <option value="EMAIL">Email</option>
-                      <option value="SMS">SMS</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-2">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</span>
-                    <select
-                      value={statusFilter}
-                      onChange={(event) => {
-                        setStatusFilter(event.target.value as StatusFilter);
-                        resetToFirstPage();
-                      }}
-                      className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="ALL">All statuses</option>
-                      <option value="SCHEDULED">Scheduled</option>
-                      <option value="SENT">Sent</option>
-                    </select>
-                  </label>
-                </>
-              ) : (
-                <>
+          <section className="grid gap-3">
+            <div className="overflow-hidden rounded-lg border bg-white">
+              <div className="grid items-center gap-3 p-4 md:grid-cols-[auto_1fr_auto]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 rounded-md px-3 text-xs font-medium"
+                  onClick={() => setCalendarMonth(startOfMonth(new Date()))}
+                >
+                  Today
+                </Button>
+                <div className="flex items-center justify-center gap-1 justify-self-center">
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 shrink-0 rounded-md px-3 text-xs font-medium"
-                    onClick={() => setCalendarMonth(startOfMonth(new Date()))}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-md"
+                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                    aria-label="Previous month"
                   >
-                    Today
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <div className="flex items-center justify-center gap-1 justify-self-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md"
-                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                      aria-label="Previous month"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-8 rounded-md px-3 text-sm font-medium text-slate-900"
-                      onClick={() => setPickerOpen((open) => !open)}
-                    >
-                      {new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(calendarMonth)}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md"
-                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                      aria-label="Next month"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </>
-              )}
-              <div
-                className={`${viewMode === "table" ? "ml-auto" : "justify-self-end"} flex items-center gap-2 rounded-lg border border-slate-200 p-1`}
-              >
-                <Button
-                  type="button"
-                  variant={viewMode === "table" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                >
-                  <List className="mr-2 h-4 w-4" />
-                  Table
-                </Button>
-                <Button
-                  type="button"
-                  variant={viewMode === "calendar" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("calendar")}
-                >
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Calendar
-                </Button>
-              </div>
-            </div>
-            {viewMode === "calendar" && pickerOpen ? (
-              <div className="flex flex-wrap items-center gap-2 border-t bg-slate-50 p-3">
-                {Array.from({ length: 12 }, (_, index) => {
-                  const candidate = new Date(calendarMonth.getFullYear(), index, 1);
-                  const isSelected = index === calendarMonth.getMonth();
-                  return (
-                    <Button
-                      key={index}
-                      type="button"
-                      size="sm"
-                      variant={isSelected ? "secondary" : "ghost"}
-                      className="h-8 rounded-md px-3 text-xs"
-                      onClick={() => {
-                        setCalendarMonth(candidate);
-                        setPickerOpen(false);
-                      }}
-                    >
-                      {new Intl.DateTimeFormat("en-GB", { month: "short" }).format(candidate)}
-                    </Button>
-                  );
-                })}
-                <div className="ml-auto flex items-center gap-2">
-                  {buildYearOptions(calendarMonth).map((year) => (
-                    <Button
-                      key={year}
-                      type="button"
-                      size="sm"
-                      variant={year === calendarMonth.getFullYear() ? "secondary" : "ghost"}
-                      className="h-8 rounded-md px-3 text-xs"
-                      onClick={() => {
-                        setCalendarMonth(new Date(year, calendarMonth.getMonth(), 1));
-                        setPickerOpen(false);
-                      }}
-                    >
-                      {year}
-                    </Button>
-                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 rounded-md px-3 text-sm font-medium text-slate-900"
+                    onClick={() => setPickerOpen((open) => !open)}
+                  >
+                    {new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(calendarMonth)}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-md"
+                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
+                <div />
+              </div>
+              {pickerOpen ? (
+                <div className="flex flex-wrap items-center gap-2 border-t bg-slate-50 p-3">
+                  {Array.from({ length: 12 }, (_, index) => {
+                    const candidate = new Date(calendarMonth.getFullYear(), index, 1);
+                    const isSelected = index === calendarMonth.getMonth();
+                    return (
+                      <Button
+                        key={index}
+                        type="button"
+                        size="sm"
+                        variant={isSelected ? "secondary" : "ghost"}
+                        className="h-8 rounded-md px-3 text-xs"
+                        onClick={() => {
+                          setCalendarMonth(candidate);
+                          setPickerOpen(false);
+                        }}
+                      >
+                        {new Intl.DateTimeFormat("en-GB", { month: "short" }).format(candidate)}
+                      </Button>
+                    );
+                  })}
+                  <div className="ml-auto flex items-center gap-2">
+                    {buildYearOptions(calendarMonth).map((year) => (
+                      <Button
+                        key={year}
+                        type="button"
+                        size="sm"
+                        variant={year === calendarMonth.getFullYear() ? "secondary" : "ghost"}
+                        className="h-8 rounded-md px-3 text-xs"
+                        onClick={() => {
+                          setCalendarMonth(new Date(year, calendarMonth.getMonth(), 1));
+                          setPickerOpen(false);
+                        }}
+                      >
+                        {year}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {campaignsQuery.data ? (
+              <div className="rounded-lg border bg-white">
+                <CampaignCalendarView
+                  campaigns={items}
+                  totalItems={totalItems}
+                  month={calendarMonth}
+                  onDateClick={(date) => {
+                    openCreateFlow({
+                      scheduledAt: date.toISOString().split("T")[0] ?? "",
+                    });
+                  }}
+                />
               </div>
             ) : null}
-          </div>
-        ) : null}
+          </section>
+        </>
+      ) : (
+        <>
+          {campaignsQuery.isLoading ? <LoadingState rows={5} /> : null}
+          {campaignsQuery.isError ? (
+            <ErrorState
+              title="Campaigns unavailable"
+              description={campaignsQuery.error.message}
+              onRetry={() => campaignsQuery.refetch()}
+            />
+          ) : null}
 
-        {campaignsQuery.data ? (
-          <div className="rounded-lg border bg-white">
-            {viewMode === "table" ? (
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length > 0 ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
+          {campaignsQuery.data ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="h-7 w-fit px-2.5 text-[11px] font-medium">
+                {totalItems} {activeTab === "scheduled" ? "scheduled" : activeTab === "sent" ? "sent" : "draft"} campaign{totalItems === 1 ? "" : "s"}
+              </Badge>
+            </div>
+          ) : null}
+
+          <section className="grid gap-3">
+            {campaignsQuery.data ? (
+              <div className="rounded-lg border bg-white">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="py-10 text-center">
-                        <EmptyCampaignState totalItems={totalItems} />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            ) : (
-              <CampaignCalendarView
-                campaigns={items}
-                totalItems={totalItems}
-                month={calendarMonth}
-                onDateClick={(date) => {
-                  setPreselectedDate(date);
-                  setCreateOpen(true);
-                }}
-              />
-            )}
-            {viewMode === "table" ? (
-              <DataTablePagination
-                page={page}
-                pageSize={pageSize}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                onPageChange={setPage}
-                onPageSizeChange={(nextPageSize) => {
-                  setPageSize(nextPageSize);
-                  setPage(1);
-                }}
-              />
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length > 0 ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="py-10 text-center">
+                          <EmptyCampaignState totalItems={totalItems} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+                <DataTablePagination
+                  page={page}
+                  pageSize={pageSize}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  onPageChange={setPage}
+                  onPageSizeChange={(nextPageSize) => {
+                    setPageSize(nextPageSize);
+                    setPage(1);
+                  }}
+                />
+              </div>
             ) : null}
-          </div>
-        ) : null}
-      </section>
+          </section>
+        </>
+      )}
     </div>
   );
+}
+
+function CreateCampaignDialog({
+  open,
+  step,
+  selectedChannel,
+  propertyCount,
+  templatesQuery,
+  draftCampaigns,
+  onOpenChange,
+  onViewAllDrafts,
+  onBack,
+  onSelectChannel,
+  onSelectTemplate,
+}: {
+  open: boolean;
+  step: "channel" | "template";
+  selectedChannel: TemplateLibraryChannelTab | null;
+  propertyCount: number;
+  templatesQuery: ReturnType<typeof useTemplates>;
+  draftCampaigns: DraftCampaignSummary[];
+  onOpenChange: (open: boolean) => void;
+  onViewAllDrafts: () => void;
+  onBack: () => void;
+  onSelectChannel: (channel: TemplateLibraryChannelTab) => void;
+  onSelectTemplate: (template: TemplateSummary) => void;
+}) {
+  const visibleTemplates = selectedChannel
+    ? filterTemplatesForPropertyCount(
+        (templatesQuery.data?.items ?? []).filter((template) => template.channel === selectedChannel),
+        propertyCount,
+      )
+    : [];
+  const groupedTemplates = groupTemplatesByGoal(visibleTemplates).filter((group) => group.templates.length > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Create campaign</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="grid gap-6">
+          {step === "channel" ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Choose the channel first. You will pick a ready-made campaign starter in the next step.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <button
+                  type="button"
+                  className="grid gap-3 rounded-xl border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                  onClick={() => onSelectChannel("EMAIL")}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div className="grid gap-1">
+                    <p className="text-base font-semibold text-slate-900">Email</p>
+                    <p className="text-sm text-muted-foreground">
+                      Branded campaigns, property storytelling, and richer promotional layouts.
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="grid gap-3 rounded-xl border border-slate-200 p-5 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                  onClick={() => onSelectChannel("SMS")}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                    <MessageSquareText className="h-4 w-4" />
+                  </div>
+                  <div className="grid gap-1">
+                    <p className="text-base font-semibold text-slate-900">SMS</p>
+                    <p className="text-sm text-muted-foreground">
+                      Short-notice offers, reminders, and direct text-only promotions.
+                    </p>
+                  </div>
+                </button>
+              </div>
+              {draftCampaigns.length > 0 ? (
+                <div className="grid gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">Continue a draft instead</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Resume one of your in-progress campaigns.</p>
+                  </div>
+                  <DraftsList drafts={draftCampaigns} limit={1} onNavigate={() => onOpenChange(false)} />
+                  {draftCampaigns.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-muted-foreground"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onViewAllDrafts();
+                      }}
+                    >
+                      See all {draftCampaigns.length} drafts
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium text-slate-900">Step 2 of 2</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pick a {selectedChannel === "EMAIL" ? "email" : "SMS"} starter. Compatible templates are filtered automatically.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={onBack}>
+                  Back
+                </Button>
+              </div>
+              {templatesQuery.isLoading ? <LoadingState rows={4} /> : null}
+              {templatesQuery.isError ? (
+                <ErrorState
+                  title="Campaign starters unavailable"
+                  description={templatesQuery.error.message}
+                  onRetry={() => templatesQuery.refetch()}
+                />
+              ) : null}
+              {!templatesQuery.isLoading && !templatesQuery.isError ? (
+                groupedTemplates.length > 0 ? (
+                  <div className="grid gap-6">
+                    {groupedTemplates.map((group) => (
+                      <section key={group.goal} className="grid gap-3">
+                        <div className="grid gap-1">
+                          <h3 className="text-base font-semibold text-slate-900">{getGoalLabel(group.goal)}</h3>
+                          <p className="text-sm text-muted-foreground">{group.description}</p>
+                        </div>
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          {group.templates.map((template) => (
+                            <Card key={template.id} className="border-slate-200">
+                              <CardHeader>
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="grid gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline">{template.channel === "EMAIL" ? "Email" : "SMS"}</Badge>
+                                    </div>
+                                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                                    <CardDescription>{template.description}</CardDescription>
+                                  </div>
+                                  <Button type="button" size="sm" onClick={() => onSelectTemplate(template)}>
+                                    Open editor
+                                    <ChevronRightIcon className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pt-0">
+                                {template.channel === "EMAIL" ? (
+                                  <EmailTemplatePreview template={template} />
+                                ) : (
+                                  <SmsTemplatePreview template={template} />
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title={`No ${selectedChannel === "EMAIL" ? "email" : "SMS"} starters available`}
+                    description="Add more active properties or switch channel to see more compatible starters."
+                  />
+                )
+              ) : null}
+            </>
+          )}
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CampaignStarterLibrary({
+  propertyCount,
+  selectedChannel,
+  onSelectChannel,
+  filtersOpen,
+  templatesQuery,
+  onUseTemplate,
+}: {
+  propertyCount: number;
+  selectedChannel: TemplateLibraryChannelTab;
+  onSelectChannel: (channel: TemplateLibraryChannelTab) => void;
+  filtersOpen: boolean;
+  templatesQuery: ReturnType<typeof useTemplates>;
+  onUseTemplate: (template: TemplateSummary) => void;
+}) {
+  if (templatesQuery.isLoading) {
+    return <LoadingState rows={4} />;
+  }
+
+  if (templatesQuery.isError) {
+    return (
+      <ErrorState
+        title="Campaign starters unavailable"
+        description={templatesQuery.error.message}
+        onRetry={() => templatesQuery.refetch()}
+      />
+    );
+  }
+
+  const channelTemplates = (templatesQuery.data?.items ?? []).filter((template) =>
+    selectedChannel === "ALL" ? true : template.channel === selectedChannel,
+  );
+  const compatibleTemplates = filterTemplatesForPropertyCount(channelTemplates, propertyCount);
+  const groupedTemplates = groupTemplatesByGoal(compatibleTemplates).filter((group) => group.templates.length > 0);
+
+  return (
+    <div className="grid gap-6">
+      {filtersOpen ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+            <div className="grid gap-0.5">
+              <p className="text-sm font-medium text-slate-900">Filters</p>
+              <p className="text-xs text-slate-500">Refine the current template library.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end gap-3 p-4">
+            <label className="grid gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
+              <select
+                value={selectedChannel}
+                onChange={(event) => onSelectChannel(event.target.value as TemplateLibraryChannelTab)}
+                className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="ALL">All channels</option>
+                <option value="EMAIL">Email</option>
+                <option value="SMS">SMS</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      {groupedTemplates.length === 0 ? (
+        <EmptyState
+          title={`No ${selectedChannel === "EMAIL" ? "email" : "SMS"} starters available`}
+          description="Add more active properties or switch channel to see more compatible starters."
+        />
+      ) : (
+        <div className="grid gap-6">
+          {groupedTemplates.map((group) => (
+            <section key={group.goal} className="grid gap-3">
+              <div className="grid gap-1">
+                <h2 className="text-base font-semibold text-slate-900">{getGoalLabel(group.goal)}</h2>
+                <p className="text-sm text-muted-foreground">{group.description}</p>
+              </div>
+              <div className="grid gap-4 xl:grid-cols-3">
+                {group.templates.map((template) => (
+                  <StarterTemplateCard
+                    key={template.id}
+                    template={template}
+                    onUseTemplate={() => onUseTemplate(template)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StarterTemplateCard({
+  template,
+  onUseTemplate,
+}: {
+  template: TemplateSummary;
+  onUseTemplate: () => void;
+}) {
+  return (
+    <Card className="border-slate-200">
+      <CardHeader className="grid gap-3 border-b bg-white">
+        <div className="flex items-start justify-between gap-3">
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{template.channel === "EMAIL" ? "Email" : "SMS"}</Badge>
+            </div>
+            <CardTitle className="text-lg">{template.name}</CardTitle>
+            <CardDescription>{template.description}</CardDescription>
+          </div>
+          <Button type="button" size="sm" className="whitespace-nowrap" onClick={onUseTemplate}>
+            Use this template
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-3 p-5">
+        {template.channel === "EMAIL" ? (
+          <EmailTemplatePreview template={template} />
+        ) : (
+          <SmsTemplatePreview template={template} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmailTemplatePreview({ template }: { template: TemplateSummary }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50">
+      <div className="p-3">
+        <div
+          className="w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm [&_*]:max-w-full [&_a]:pointer-events-none [&_img]:h-auto [&_img]:max-w-full [&_table]:!w-full [&_table]:max-w-full [&_td]:max-w-full"
+          dangerouslySetInnerHTML={{ __html: extractEmailBody(template.contentHtml) }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SmsTemplatePreview({ template }: { template: TemplateSummary }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <div className="grid gap-3 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span>Messages</span>
+          <span>Now</span>
+        </div>
+        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-900">
+          {template.contentText}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function extractEmailBody(html: string) {
+  const match = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  return match?.[1] ?? html;
+}
+
+function normalizeTab(value: string | null): CampaignTab {
+  return value === "drafts" || value === "scheduled" || value === "sent" || value === "calendar" || value === "templates"
+    ? value
+    : "scheduled";
 }
 
 function EmptyCampaignState({ totalItems }: { totalItems: number }) {
@@ -448,7 +880,7 @@ function EmptyCampaignState({ totalItems }: { totalItems: number }) {
       </p>
       <p className="text-sm text-muted-foreground">
         {totalItems === 0
-          ? "Schedule or send a campaign to populate this list."
+          ? "Start from a campaign starter to create your first send."
           : "Try widening the channel or status filters."}
       </p>
     </div>

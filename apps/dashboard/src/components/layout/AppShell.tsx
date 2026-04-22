@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Mail, Users, FileText, LogOut } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { LayoutDashboard, Mail, Users, LogOut, Settings2, Home } from "lucide-react";
 import { getUserDisplayName } from "@repo/auth";
 import { DirectRentalLockup } from "@repo/brand";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,18 @@ import { useCurrentUser, useLogoutMutation } from "@/features/auth/hooks";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/properties", label: "Properties", icon: Home },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/campaigns", label: "Campaigns", icon: Mail },
-  { href: "/templates", label: "Templates", icon: FileText },
+  {
+    href: "/campaigns",
+    label: "Campaigns",
+    icon: Mail,
+    children: [
+      { href: "/campaigns?tab=templates", label: "Template Library", tab: "templates" },
+      { href: "/campaigns?tab=calendar", label: "Calendar", tab: "calendar" },
+    ],
+  },
+  { href: "/settings", label: "Settings", icon: Settings2 },
 ];
 
 type AppShellProps = {
@@ -23,6 +32,7 @@ type AppShellProps = {
 
 export function AppShell({ children, compactShell = false }: AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogoutMutation();
@@ -47,17 +57,40 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
               const isActive = pathname.startsWith(item.href);
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900",
-                    isActive && "bg-slate-100 text-slate-950",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                <div key={item.href} className="grid gap-1">
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900",
+                      isActive && "bg-slate-100 text-slate-950",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                  {item.children && isActive ? (
+                    <div className="ml-7 grid gap-1 border-l border-slate-200 pl-3">
+                      {item.children.map((child) => {
+                        const childIsActive =
+                          pathname.startsWith("/campaigns") &&
+                          searchParams.get("tab") === child.tab;
+
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              "rounded-md px-3 py-2 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-900",
+                              childIsActive && "bg-slate-100 font-medium text-slate-950",
+                            )}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>

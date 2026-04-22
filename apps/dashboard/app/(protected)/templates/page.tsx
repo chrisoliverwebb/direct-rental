@@ -1,5 +1,5 @@
-import { TemplatesPage } from "@/features/templates/TemplatesPage";
+import { redirect } from "next/navigation";
 
 export default function TemplatesRoute() {
-  return <TemplatesPage />;
+  redirect("/campaigns?tab=templates");
 }

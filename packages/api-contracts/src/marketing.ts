@@ -31,7 +31,7 @@ export type CampaignRecipientSelection = z.infer<typeof campaignRecipientSelecti
 export const campaignSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: publishedCampaignStatusSchema,
+  status: campaignStatusSchema,
   channel: campaignChannelSchema,
   subject: z.string().nullable(),
   recipientCount: z.number().int().min(0),
@@ -111,7 +111,7 @@ export const getCampaignsQuerySchema = z.object({
   page: z.number().int().min(1).optional(),
   pageSize: z.number().int().min(1).max(100).optional(),
   channel: campaignChannelSchema.optional(),
-  status: publishedCampaignStatusSchema.optional(),
+  status: campaignStatusSchema.optional(),
   sortDirection: z.enum(["asc", "desc"]).optional(),
 });
 

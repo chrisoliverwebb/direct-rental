@@ -235,6 +235,21 @@ const toCampaignSummary = (campaign: LiveCampaign): CampaignSummary => ({
   createdAt: campaign.createdAt,
 });
 
+const toDraftCampaignAsCampaignSummary = (campaign: DraftCampaignDetail): CampaignSummary => ({
+  id: campaign.id,
+  name: campaign.name,
+  status: "DRAFT",
+  channel: campaign.channel,
+  subject: campaign.subject,
+  recipientCount: countRecipients(campaign.recipientSelection),
+  recipientSelection: campaign.recipientSelection,
+  scheduledAt: null,
+  sentAt: null,
+  openRate: null,
+  clickRate: null,
+  createdAt: campaign.createdAt,
+});
+
 const countRecipients = (selection: CampaignDetail["recipientSelection"]) => {
   if (selection.type === "ALL") {
     return contacts.length;
@@ -449,15 +464,19 @@ export const listCampaigns = ({
   status,
   sortDirection = "desc",
 }: GetCampaignsQuery = {}) => {
-  const filtered = campaigns
+  const sourceItems =
+    status === "DRAFT"
+      ? draftCampaigns.map(toDraftCampaignAsCampaignSummary)
+      : campaigns.map(toCampaignSummary);
+
+  const filtered = sourceItems
     .filter((campaign) => (channel ? campaign.channel === channel : true))
     .filter((campaign) => (status ? campaign.status === status : true))
     .sort((left, right) => {
       const leftDate = left.sentAt ?? left.scheduledAt ?? left.createdAt;
       const rightDate = right.sentAt ?? right.scheduledAt ?? right.createdAt;
       return sortDirection === "desc" ? rightDate.localeCompare(leftDate) : leftDate.localeCompare(rightDate);
-    })
-    .map(toCampaignSummary);
+    });
 
   const start = (page - 1) * pageSize;
   const items = filtered.slice(start, start + pageSize);
