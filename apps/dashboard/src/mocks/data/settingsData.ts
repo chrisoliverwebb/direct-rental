@@ -1,7 +1,9 @@
 import type {
   BrandingSettings,
+  CompanyFieldPermissions,
   CompanySettings,
   MarketingSettings,
+  MessageBrandingSettings,
   PropertyCalendarSettings,
   PropertySettings,
   SendingSettings,
@@ -13,6 +15,7 @@ import { createId } from "@repo/shared";
 
 let companySettings: CompanySettings = {
   companyName: "Direct Rental Co.",
+  legalName: "Direct Rental Company Ltd",
   tradingName: "Letting Layer",
   contactEmail: "hello@directrental.test",
   contactPhone: "+44 131 555 0142",
@@ -24,6 +27,12 @@ let companySettings: CompanySettings = {
     region: "Scotland",
     postcode: "EH2 3AT",
     country: "United Kingdom",
+  },
+  socialLinks: {
+    website: "https://directrental.test",
+    instagram: "https://instagram.com/directrental",
+    facebook: "https://facebook.com/directrental",
+    x: "https://x.com/directrental",
   },
   defaultSenderName: "Alex Morgan",
   defaultReplyToEmail: "owner@directrental.test",
@@ -129,21 +138,42 @@ let bookingAvailabilitySettings: PropertyCalendarSettings[] = [
   },
 ];
 
+let companyFieldPermissions: CompanyFieldPermissions = {
+  canEditWebsiteUrl: false,
+  canEditContactEmail: false,
+};
+
 let brandingSettings: BrandingSettings = {
   brandName: "Direct Rental Co.",
-  logoUrl: "https://directrental.test/assets/logo.svg",
+  logoUrl: null,
   companyThemeId: "classic-coastal",
+  primaryFontId: "playfair",
+  secondaryFontId: "inter",
   primaryColour: "#0f4c81",
   secondaryColour: "#dbe7f3",
   accentColour: "#1d7bd7",
   backgroundColour: "#ffffff",
   textColour: "#0f172a",
   mutedTextColour: "#64748b",
-  headingFont: "Fraunces",
-  bodyFont: "Manrope",
+  headingFont: "'Playfair Display', Georgia, 'Times New Roman', serif",
+  bodyFont: "'Inter', Arial, sans-serif",
   buttonStyle: "rounded",
   cornerRadius: "medium",
   spacingScale: "comfortable",
+};
+
+let messageBrandingSettings: MessageBrandingSettings = {
+  complianceInfoRegion: "uk",
+  email: {
+    includeLogo: true,
+    showSocialLinks: true,
+    showContactEmail: true,
+    customFooterMessage: "Seasonal offers, local recommendations, and last-minute availability from the Direct Rental team.",
+  },
+  sms: {
+    smsSenderName: "Direct Rental",
+    smsSignoff: "Direct Rental Co.",
+  },
 };
 
 let marketingSettings: MarketingSettings = {
@@ -164,9 +194,11 @@ let sendingSettings: SendingSettings = {
 
 export const getSettingsOverview = (): SettingsOverview => ({
   company: companySettings,
+  companyFieldPermissions,
   properties: propertySettings,
   branding: brandingSettings,
   bookingAvailability: bookingAvailabilitySettings,
+  messageBranding: messageBrandingSettings,
   marketing: marketingSettings,
   sending: sendingSettings,
 });
@@ -179,6 +211,11 @@ export const updateCompanySettings = (request: CompanySettings) => {
 export const updateBrandingSettings = (request: BrandingSettings) => {
   brandingSettings = request;
   return brandingSettings;
+};
+
+export const updateMessageBrandingSettings = (request: MessageBrandingSettings) => {
+  messageBrandingSettings = request;
+  return messageBrandingSettings;
 };
 
 export const updateMarketingSettings = (request: MarketingSettings) => {

@@ -1,5 +1,5 @@
 import { ZodSchema } from "zod";
-import { getStoredAccessToken } from "@repo/auth";
+import { clearStoredAccessToken, getStoredAccessToken } from "@repo/auth";
 import { env } from "@/lib/env";
 
 type FetchOptions = RequestInit & {
@@ -46,6 +46,12 @@ export const fetcher = async <T>(path: string, options: FetchOptions = {}) => {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredAccessToken();
+      window.location.replace("/login");
+      throw new ApiError("Session expired", 401);
+    }
+
     let message = "Request failed";
 
     try {

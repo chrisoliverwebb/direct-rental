@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, LoaderCircle, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
+import { PhoneNumberInput, formatPhoneNumber, type PhoneCountryCode } from "@/components/forms/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,8 +90,7 @@ export function ContactCreatePage() {
   const [csvPreview, setCsvPreview] = useState<RawCsvPreview | null>(null);
   const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
   const [importOpen, setImportOpen] = useState(false);
-  const [phoneCountry, setPhoneCountry] =
-    useState<(typeof phoneCountries)[number]["code"]>("GB");
+  const [phoneCountry, setPhoneCountry] = useState<PhoneCountryCode>("GB");
 
   const form = useForm<ContactCreateFormValues>({
     resolver: zodResolver(createContactRequestSchema) as unknown as Resolver<ContactCreateFormValues>,
@@ -153,18 +153,9 @@ export function ContactCreatePage() {
   }, [csvPreview, fieldMapping]);
 
   const handleCreateContact = async (values: ContactCreateFormValues) => {
-    const selectedCountry =
-      phoneCountries.find((country) => country.code === phoneCountry) ??
-      phoneCountries[0];
-    const normalizedLocalPhone =
-      values.phone?.replace(/[^\d]/g, "").replace(/^0+/, "") ?? "";
-    const formattedPhone = normalizedLocalPhone
-      ? `${selectedCountry.dialCode}${normalizedLocalPhone}`
-      : null;
-
     const result = await createContact.mutateAsync({
       ...values,
-      phone: formattedPhone,
+      phone: formatPhoneNumber(phoneCountry, values.phone ?? ""),
     });
     void result;
     completeContactSuccess("Contact created successfully");
@@ -304,34 +295,15 @@ export function ContactCreatePage() {
                   {form.formState.errors.consents?.emailMarketing?.message}
                 </span>
               </div>
-              <InlineFormField
+              <PhoneNumberInput
+                id="phone"
                 label="Phone number"
+                countryCode={phoneCountry}
+                value={phoneValue ?? ""}
                 error={form.formState.errors.phone?.message}
-                htmlFor="phone"
-              >
-                <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
-                  <Select
-                    value={phoneCountry}
-                    onChange={(event) =>
-                      setPhoneCountry(
-                        event.target
-                          .value as (typeof phoneCountries)[number]["code"],
-                      )
-                    }
-                  >
-                    {phoneCountries.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    id="phone"
-                    {...form.register("phone")}
-                    placeholder="7700 900123"
-                  />
-                </div>
-              </InlineFormField>
+                onCountryChange={setPhoneCountry}
+                onChange={(value) => form.setValue("phone", value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+              />
               <div className="grid gap-2">
                 <label className="flex items-center gap-2 text-sm text-slate-900">
                   <Checkbox

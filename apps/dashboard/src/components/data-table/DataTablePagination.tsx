@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 
 type DataTablePaginationProps = {
   page: number;
@@ -28,17 +29,17 @@ export function DataTablePagination({
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Rows</span>
-          <select
+          <Select
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            className="flex h-9 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="w-[88px]"
           >
             {[10, 20, 50].map((size) => (
               <option key={size} value={size}>
                 {size}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" size="icon" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>

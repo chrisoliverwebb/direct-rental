@@ -69,6 +69,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { FontDropdown } from "@/components/forms/FontDropdown";
+import { ImageUploadField } from "@/components/forms/ImageUploadField";
+import { Select } from "@/components/ui/select";
+import { SaveStatusActions } from "@/components/forms/SaveStatusActions";
 import {
   Dialog,
   DialogBody,
@@ -82,6 +86,7 @@ import { CampaignEmailEditor } from "@/features/campaigns/CampaignEmailEditor";
 import { EmailCampaignPreview } from "@/features/campaigns/EmailCampaignPreview";
 import { useCreateSavedBlock, useDeleteSavedBlock, useSavedBlocks } from "@/features/marketing/hooks";
 import { useUndoRedoState } from "@/hooks/useUndoRedoState";
+import { DEFAULT_BRAND_FONT, getBrandFontByFontFamily, getBrandFontById } from "@/lib/brandFonts";
 import { cn } from "@/lib/utils";
 
 type EmailCampaignWorkspaceProps = {
@@ -1085,19 +1090,18 @@ export function EmailCampaignWorkspace({
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
-            <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
-              {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
-            </Badge>
             <Button type="button" variant="outline" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo">
               <Undo2 className="h-4 w-4" />
             </Button>
             <Button type="button" variant="outline" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo">
               <Redo2 className="h-4 w-4" />
             </Button>
-            <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !hasUnsavedChanges}>
-              <Save className="mr-2 h-4 w-4" />
-              {isSaving ? "Saving..." : submitLabel}
-            </Button>
+            <SaveStatusActions
+              hasUnsavedChanges={hasUnsavedChanges}
+              isSaving={isSaving}
+              onSave={() => handleSave()}
+              saveLabel={submitLabel}
+            />
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -1496,7 +1500,7 @@ export function EmailCampaignWorkspace({
           <DialogBody className="grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-medium text-slate-900">Who</span>
-              <select
+              <Select
                 value={recipientSelection.type}
                 onChange={() =>
                   setEditorState((current) => ({
@@ -1504,10 +1508,9 @@ export function EmailCampaignWorkspace({
                     recipientSelection: { type: "ALL" },
                   }))
                 }
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="ALL">All contacts</option>
-              </select>
+              </Select>
             </label>
             <div className="grid gap-3 rounded-lg border border-slate-200 p-4">
               <div>
@@ -2229,6 +2232,7 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
   const textDecoration = currentStyles.textDecoration ?? "none";
   const isBold = Number(fontWeight) >= 600;
   const isItalic = currentStyles.fontStyle === "italic";
+  const selectedFont = getBrandFontByFontFamily(currentStyles.fontFamily) ?? DEFAULT_BRAND_FONT;
   const hasDecoration = (token: "underline" | "line-through") => textDecoration.split(" ").includes(token);
 
   const updateStyles = (updater: (styles: NonNullable<EmailBlock["styles"]>) => NonNullable<EmailBlock["styles"]>) => {
@@ -2335,21 +2339,17 @@ function BlockSettingsPanel({ block, onUpdate }: BlockSettingsPanelProps) {
               }}
             />
           ) : null}
-          <SelectField
+          <FontDropdown
             label="Font family"
-            value={currentStyles.fontFamily ?? "Arial, sans-serif"}
-            options={[
-              { label: "Arial, sans-serif", value: "Arial, sans-serif" },
-              { label: "Georgia, serif", value: "Georgia, serif" },
-              { label: "Times New Roman, serif", value: '"Times New Roman", serif' },
-              { label: "Verdana, sans-serif", value: "Verdana, sans-serif" },
-            ]}
-            onChange={(value) =>
+            value={selectedFont.id}
+            showEmailWarning
+            onChange={(fontId) => {
+              const nextFont = getBrandFontById(fontId) ?? DEFAULT_BRAND_FONT;
               updateStyles((styles) => ({
                 ...styles,
-                fontFamily: value,
-              }))
-            }
+                fontFamily: nextFont.fontFamily,
+              }));
+            }}
           />
           <SelectField
             label="Font size"
@@ -2651,41 +2651,7 @@ function ImageSettingsPanel({
   block: Extract<EmailBlock, { type: "image" }>;
   onUpdate: (updater: (block: EmailBlock) => EmailBlock) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const previewSrc = block.sourceType === "url" ? (block.imageUrl ?? "") : (block.uploadedImageData ?? "");
-
-  const handleFile = async (file: File | undefined) => {
-    if (!file) {
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file");
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const dataUrl = await readImageFileAsDataUrl(file);
-      onUpdate((current) =>
-        current.type === "image"
-          ? {
-              ...current,
-              sourceType: "upload",
-              uploadedImageData: dataUrl,
-            imageUrl: null,
-            }
-          : current,
-      );
-      toast.success("Image uploaded");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to upload image";
-      toast.error("Upload failed", { description: message });
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   return (
     <Card className="grid gap-4 p-4">
@@ -2745,46 +2711,35 @@ function ImageSettingsPanel({
               )
             }
           />
-        ) : (
-          <div className="grid gap-2">
-            <span className="text-sm font-medium text-slate-900">Uploaded file</span>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={isUploading} onClick={() => inputRef.current?.click()}>
-                {isUploading ? "Uploading..." : previewSrc ? "Replace image" : "Upload image"}
-              </Button>
-              {previewSrc ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    onUpdate((current) =>
-                      current.type === "image"
-                        ? {
-                            ...current,
-                            uploadedImageData: null,
-                          }
-                        : current,
-                    )
-                  }
-                >
-                  Remove
-                </Button>
-              ) : null}
-            </div>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                await handleFile(file);
-              }}
+          ) : (
+            <ImageUploadField
+              label="Uploaded file"
+              value={previewSrc}
+              alt={block.alt || "Image preview"}
+              onChange={(value) =>
+                onUpdate((current) =>
+                  current.type === "image"
+                    ? {
+                        ...current,
+                        sourceType: "upload",
+                        uploadedImageData: value,
+                        imageUrl: null,
+                      }
+                    : current,
+                )
+              }
+              onRemove={() =>
+                onUpdate((current) =>
+                  current.type === "image"
+                    ? {
+                        ...current,
+                        uploadedImageData: null,
+                      }
+                    : current,
+                )
+              }
             />
-          </div>
-        )}
+          )}
         <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
           {previewSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -2959,17 +2914,16 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
   return (
     <label className="grid gap-2">
       <span className="text-sm font-medium text-slate-900">{label}</span>
-      <select
+      <Select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

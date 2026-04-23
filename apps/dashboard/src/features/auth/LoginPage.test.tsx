@@ -37,7 +37,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() => {
-      expect(router.push).toHaveBeenCalledWith("/dashboard");
+      expect(router.push).toHaveBeenCalledWith("/properties");
     });
   });
 });

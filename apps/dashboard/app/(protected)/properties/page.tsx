@@ -1,5 +1,5 @@
-import { PropertiesPage } from "@/features/settings/PropertiesPage";
+import { PropertiesListPage } from "@/features/properties/PropertiesListPage";
 
 export default function PropertiesRoute() {
-  return <PropertiesPage />;
+  return <PropertiesListPage />;
 }

@@ -7,6 +7,7 @@ import { BackButton } from "@/components/navigation/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -380,7 +381,7 @@ export function SmsCampaignWorkspace({
           <DialogBody className="grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-medium text-slate-900">Who</span>
-              <select
+              <Select
                 value={recipientSelection.type}
                 onChange={() =>
                   setEditorState((current) => ({
@@ -388,10 +389,9 @@ export function SmsCampaignWorkspace({
                     recipientSelection: { type: "ALL" },
                   }))
                 }
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="ALL">All contacts</option>
-              </select>
+              </Select>
             </label>
             <div className="grid gap-3 rounded-lg border border-slate-200 p-4">
               <div>

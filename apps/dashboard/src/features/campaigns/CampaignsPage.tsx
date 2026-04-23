@@ -33,7 +33,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Select } from "@/components/ui/select";
+import { TabSelector } from "@/components/ui/tab-selector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   filterTemplatesForPropertyCount,
@@ -221,8 +222,8 @@ export function CampaignsPage() {
       </div>
 
       {activeTab !== "templates" && activeTab !== "calendar" ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-2">
-          <SegmentedControl
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabSelector
             options={campaignTabs.map((tab) => ({ value: tab.id, label: tab.label }))}
             value={activeTab as Exclude<CampaignTab, "templates" | "calendar">}
             onChange={(value) => switchTab(value)}
@@ -269,18 +270,18 @@ export function CampaignsPage() {
           <div className="flex flex-wrap items-end gap-3 p-4">
             <label className="grid gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
-              <select
+              <Select
                 value={channelFilter}
                 onChange={(event) => {
                   setChannelFilter(event.target.value as ChannelFilter);
                   resetToFirstPage();
                 }}
-                className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="min-w-[140px]"
               >
                 <option value="ALL">All channels</option>
                 <option value="EMAIL">Email</option>
                 <option value="SMS">SMS</option>
-              </select>
+              </Select>
             </label>
           </div>
         </div>
@@ -754,15 +755,15 @@ function CampaignStarterLibrary({
           <div className="flex flex-wrap items-end gap-3 p-4">
             <label className="grid gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
-              <select
+              <Select
                 value={selectedChannel}
                 onChange={(event) => onSelectChannel(event.target.value as TemplateLibraryChannelTab)}
-                className="flex h-10 min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="min-w-[140px]"
               >
                 <option value="ALL">All channels</option>
                 <option value="EMAIL">Email</option>
                 <option value="SMS">SMS</option>
-              </select>
+              </Select>
             </label>
           </div>
         </div>

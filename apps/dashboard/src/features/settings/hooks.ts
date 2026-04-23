@@ -5,6 +5,7 @@ import type {
   BrandingSettings,
   CompanySettings,
   MarketingSettings,
+  MessageBrandingSettings,
   SendingSettings,
   UpdatePropertyCalendarSettings,
   UpsertPropertySettings,
@@ -36,6 +37,15 @@ export const useUpdateBrandingSettings = () => {
 
   return useMutation({
     mutationFn: (request: BrandingSettings) => settingsApi.updateBranding(request),
+    onSuccess: async () => invalidateSettings(queryClient),
+  });
+};
+
+export const useUpdateMessageBrandingSettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: MessageBrandingSettings) => settingsApi.updateMessageBranding(request),
     onSuccess: async () => invalidateSettings(queryClient),
   });
 };

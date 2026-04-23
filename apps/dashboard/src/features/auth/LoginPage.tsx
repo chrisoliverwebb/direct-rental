@@ -31,7 +31,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (currentUserQuery.isSuccess && currentUserQuery.data) {
-      router.replace("/dashboard");
+      router.replace("/properties");
     }
   }, [currentUserQuery.data, currentUserQuery.isSuccess, router]);
 
@@ -89,7 +89,7 @@ export function LoginPage() {
                   noValidate
                   onSubmit={form.handleSubmit(async (values) => {
                     await loginMutation.mutateAsync(values);
-                    router.push("/dashboard");
+                    router.push("/properties");
                   })}
                 >
                   <FormField label="Email" error={form.formState.errors.email?.message} htmlFor="email">

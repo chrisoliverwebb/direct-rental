@@ -3,6 +3,7 @@ import {
   brandingSettingsSchema,
   companySettingsSchema,
   marketingSettingsSchema,
+  messageBrandingSettingsSchema,
   sendingSettingsSchema,
   updatePropertyCalendarSettingsSchema,
   upsertPropertySettingsSchema,
@@ -14,6 +15,7 @@ import {
   updateBrandingSettings,
   updateCompanySettings,
   updateMarketingSettings,
+  updateMessageBrandingSettings,
   updatePropertyCalendarSettings,
   updatePropertySettings,
   updateSendingSettings,
@@ -28,6 +30,10 @@ export const settingsHandlers = [
   http.put("*/api/v1/settings/branding", async ({ request }) => {
     const body = brandingSettingsSchema.parse(await request.json());
     return HttpResponse.json(updateBrandingSettings(body));
+  }),
+  http.put("*/api/v1/settings/message-branding", async ({ request }) => {
+    const body = messageBrandingSettingsSchema.parse(await request.json());
+    return HttpResponse.json(updateMessageBrandingSettings(body));
   }),
   http.put("*/api/v1/settings/marketing", async ({ request }) => {
     const body = marketingSettingsSchema.parse(await request.json());

@@ -35,13 +35,24 @@ export const addressSchema = z.object({
 
 export type Address = z.infer<typeof addressSchema>;
 
+export const socialLinksSchema = z.object({
+  website: nullableUrlField,
+  instagram: nullableUrlField,
+  facebook: nullableUrlField,
+  x: nullableUrlField,
+});
+
+export type SocialLinks = z.infer<typeof socialLinksSchema>;
+
 export const companySettingsSchema = z.object({
   companyName: z.string().trim().min(1, "Company name is required"),
+  legalName: nullableStringField,
   tradingName: nullableStringField,
   contactEmail: nullableEmailField,
   contactPhone: nullableStringField,
   websiteUrl: nullableUrlField,
   address: addressSchema,
+  socialLinks: socialLinksSchema.default({ website: null, instagram: null, facebook: null, x: null }),
   defaultSenderName: nullableStringField,
   defaultReplyToEmail: nullableEmailField,
   defaultCurrency: nullableStringField,
@@ -82,6 +93,8 @@ export const brandingSettingsSchema = z.object({
   brandName: nullableStringField,
   logoUrl: nullableUrlField,
   companyThemeId: nullableStringField,
+  primaryFontId: nullableStringField,
+  secondaryFontId: nullableStringField,
   primaryColour: nullableStringField,
   secondaryColour: nullableStringField,
   accentColour: nullableStringField,
@@ -152,11 +165,38 @@ export const sendingSettingsSchema = z.object({
 
 export type SendingSettings = z.infer<typeof sendingSettingsSchema>;
 
+export const complianceInfoRegionSchema = z.enum(["uk", "eu", "other"]);
+
+export const messageBrandingSettingsSchema = z.object({
+  complianceInfoRegion: complianceInfoRegionSchema.default("uk"),
+  email: z.object({
+    includeLogo: z.boolean().default(true),
+    showSocialLinks: z.boolean().default(false),
+    showContactEmail: z.boolean().default(true),
+    customFooterMessage: nullableStringField,
+  }),
+  sms: z.object({
+    smsSenderName: nullableStringField,
+    smsSignoff: nullableStringField,
+  }),
+});
+
+export type MessageBrandingSettings = z.infer<typeof messageBrandingSettingsSchema>;
+
+export const companyFieldPermissionsSchema = z.object({
+  canEditWebsiteUrl: z.boolean().default(true),
+  canEditContactEmail: z.boolean().default(true),
+});
+
+export type CompanyFieldPermissions = z.infer<typeof companyFieldPermissionsSchema>;
+
 export const settingsOverviewSchema = z.object({
   company: companySettingsSchema,
+  companyFieldPermissions: companyFieldPermissionsSchema,
   properties: z.array(propertySettingsSchema),
   branding: brandingSettingsSchema,
   bookingAvailability: z.array(propertyCalendarSettingsSchema),
+  messageBranding: messageBrandingSettingsSchema,
   marketing: marketingSettingsSchema,
   sending: sendingSettingsSchema,
 });

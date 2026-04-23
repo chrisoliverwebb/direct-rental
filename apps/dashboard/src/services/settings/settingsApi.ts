@@ -2,6 +2,7 @@ import {
   companySettingsSchema,
   brandingSettingsSchema,
   marketingSettingsSchema,
+  messageBrandingSettingsSchema,
   propertySettingsSchema,
   sendingSettingsSchema,
   settingsOverviewSchema,
@@ -10,6 +11,7 @@ import {
   type BrandingSettings,
   type CompanySettings,
   type MarketingSettings,
+  type MessageBrandingSettings,
   type PropertySettings,
   type SendingSettings,
   type SettingsOverview,
@@ -22,6 +24,7 @@ export interface SettingsApi {
   getSettings(): Promise<SettingsOverview>;
   updateCompany(request: CompanySettings): Promise<CompanySettings>;
   updateBranding(request: BrandingSettings): Promise<BrandingSettings>;
+  updateMessageBranding(request: MessageBrandingSettings): Promise<MessageBrandingSettings>;
   updateMarketing(request: MarketingSettings): Promise<MarketingSettings>;
   updateSending(request: SendingSettings): Promise<SendingSettings>;
   createProperty(request: UpsertPropertySettings): Promise<PropertySettings>;
@@ -46,6 +49,12 @@ export const settingsApi: SettingsApi = {
       method: "PUT",
       body: JSON.stringify(brandingSettingsSchema.parse(request)),
       schema: brandingSettingsSchema,
+    }),
+  updateMessageBranding: async (request) =>
+    fetcher<MessageBrandingSettings>("/v1/settings/message-branding", {
+      method: "PUT",
+      body: JSON.stringify(messageBrandingSettingsSchema.parse(request)),
+      schema: messageBrandingSettingsSchema,
     }),
   updateMarketing: async (request) =>
     fetcher<MarketingSettings>("/v1/settings/marketing", {

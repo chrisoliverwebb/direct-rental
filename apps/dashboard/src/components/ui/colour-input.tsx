@@ -11,6 +11,7 @@ type ColourInputProps = {
   onChange: (value: string | undefined) => void;
   allowNone?: boolean;
   fallbackColour?: string;
+  error?: string;
 };
 
 const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -21,6 +22,7 @@ export function ColourInput({
   onChange,
   allowNone = false,
   fallbackColour = "#ffffff",
+  error,
 }: ColourInputProps) {
   const inputId = useId();
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -69,7 +71,13 @@ export function ColourInput({
           onChange={(event) => setDraftValue(event.target.value)}
           onBlur={(event) => commitValue(event.target.value)}
           placeholder={allowNone ? "None or #ffffff" : "#111827"}
-          className={cn("pl-11 font-mono text-sm", allowNone ? "pr-20" : "pr-3", !draftValue && allowNone && "text-muted-foreground")}
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            "pl-11 font-mono text-sm",
+            allowNone ? "pr-20" : "pr-3",
+            !draftValue && allowNone && "text-muted-foreground",
+            error && "border-destructive focus-visible:ring-destructive",
+          )}
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           {allowNone ? (
@@ -100,6 +108,7 @@ export function ColourInput({
           aria-hidden="true"
         />
       </div>
+      <span className={cn("min-h-5 text-sm text-destructive", !error && "invisible")}>{error ?? "No error"}</span>
     </label>
   );
 }

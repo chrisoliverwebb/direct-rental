@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Info, Mail, MessageSquare, Plus, Search } from "lucide-react";
+import { Info, Mail, MessageSquare, Search } from "lucide-react";
 import { contactStatusLabel } from "@repo/marketing";
 import { formatDate } from "@repo/shared";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TabSelector } from "@/components/ui/tab-selector";
 import {
   Table,
   TableBody,
@@ -44,8 +45,7 @@ export function ContactsPage() {
           href="/contacts/new"
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          New
+          New contact
         </Link>
       </div>
 
@@ -59,32 +59,15 @@ export function ContactsPage() {
             className="pl-9"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={status === "SUBSCRIBED" ? "default" : "outline"}
-            onClick={() => setStatus("SUBSCRIBED")}
-          >
-            Subscribed
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={status === "UNSUBSCRIBED" ? "default" : "outline"}
-            onClick={() => setStatus("UNSUBSCRIBED")}
-          >
-            Unsubscribed
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={status === "" ? "default" : "outline"}
-            onClick={() => setStatus("")}
-          >
-            All
-          </Button>
-        </div>
+        <TabSelector
+          options={[
+            { value: "SUBSCRIBED", label: "Subscribed" },
+            { value: "UNSUBSCRIBED", label: "Unsubscribed" },
+            { value: "", label: "All" },
+          ]}
+          value={status}
+          onChange={setStatus}
+        />
       </div>
 
       {contactsQuery.isLoading ? <LoadingState rows={6} /> : null}
