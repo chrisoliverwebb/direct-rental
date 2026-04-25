@@ -7,9 +7,8 @@ import { contactStatusLabel } from "@repo/marketing";
 import { formatDate } from "@repo/shared";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TabSelector } from "@/components/ui/tab-selector";
+import { TabbedPage } from "@/components/layout/TabbedPage";
 import {
   Table,
   TableBody,
@@ -21,35 +20,42 @@ import {
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
+import { usePageTab } from "@/hooks/usePageTab";
+import { CONTACTS_TABS, CONTACTS_DEFAULT_TAB, type ContactsTab } from "@/lib/pageTabConfigs";
 import { useContacts } from "@/features/marketing/hooks";
 
 export function ContactsPage() {
   const router = useRouter();
+  const [activeTab, setTab] = usePageTab<ContactsTab>(CONTACTS_TABS, CONTACTS_DEFAULT_TAB);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"SUBSCRIBED" | "UNSUBSCRIBED" | "">(
-    "SUBSCRIBED",
-  );
+
+  const statusFilter: "SUBSCRIBED" | "UNSUBSCRIBED" | undefined =
+    activeTab === "subscribed" ? "SUBSCRIBED" :
+    activeTab === "unsubscribed" ? "UNSUBSCRIBED" :
+    undefined;
 
   const contactsQuery = useContacts({
     page: 1,
     pageSize: 10,
     search: search || undefined,
-    status: status ? (status as "SUBSCRIBED" | "UNSUBSCRIBED") : undefined,
+    status: statusFilter,
   });
 
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
+    <TabbedPage
+      title="Contacts"
+      action={
         <Link
           href="/contacts/new"
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           New contact
         </Link>
-      </div>
-
-      <div className="grid gap-3">
+      }
+      tabs={CONTACTS_TABS}
+      activeTab={activeTab}
+      onTabChange={setTab}
+      beforeTabs={
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
@@ -59,17 +65,8 @@ export function ContactsPage() {
             className="pl-9"
           />
         </div>
-        <TabSelector
-          options={[
-            { value: "SUBSCRIBED", label: "Subscribed" },
-            { value: "UNSUBSCRIBED", label: "Unsubscribed" },
-            { value: "", label: "All" },
-          ]}
-          value={status}
-          onChange={setStatus}
-        />
-      </div>
-
+      }
+    >
       {contactsQuery.isLoading ? <LoadingState rows={6} /> : null}
       {contactsQuery.isError ? (
         <ErrorState
@@ -168,6 +165,6 @@ export function ContactsPage() {
           </Table>
         </div>
       ) : null}
-    </div>
+    </TabbedPage>
   );
 }

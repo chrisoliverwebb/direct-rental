@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Mail, Users, LogOut, Settings2, Home, ChevronRight } from "lucide-react";
+import { Mail, Users, LogOut, Settings2, Home, ChevronRight, CalendarDays } from "lucide-react";
 import { getUserDisplayName } from "@repo/auth";
 import { DirectRentalLockup } from "@repo/brand";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogoutMutation } from "@/features/auth/hooks";
+import {
+  CONTACTS_TABS, CONTACTS_DEFAULT_TAB,
+  CAMPAIGNS_TABS, CAMPAIGNS_DEFAULT_TAB,
+  CONFIGURATION_TABS, CONFIGURATION_DEFAULT_TAB,
+} from "@/lib/pageTabConfigs";
 
 type NavChild = {
   href: string;
   label: string;
-  tab: string;
+  tab: string | null;
 };
 
 type NavItem = {
@@ -27,6 +32,18 @@ type NavSection = {
   items: NavItem[];
 };
 
+function toNavChildren(
+  tabs: Array<{ value: string; label: string }>,
+  basePath: string,
+  defaultTab: string,
+): NavChild[] {
+  return tabs.map((tab) => ({
+    href: tab.value === defaultTab ? basePath : `${basePath}?tab=${tab.value}`,
+    label: tab.label,
+    tab: tab.value === defaultTab ? null : tab.value,
+  }));
+}
+
 const navigationSections: NavSection[] = [
   {
     label: "Properties",
@@ -37,17 +54,25 @@ const navigationSections: NavSection[] = [
   {
     label: "Marketing",
     items: [
-      { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/marketing/calendar", label: "Calendar", icon: CalendarDays },
+      {
+        href: "/contacts",
+        label: "Contacts",
+        icon: Users,
+        children: toNavChildren(CONTACTS_TABS, "/contacts", CONTACTS_DEFAULT_TAB),
+      },
       {
         href: "/campaigns",
         label: "Campaigns",
         icon: Mail,
-        children: [
-          { href: "/campaigns?tab=templates", label: "Template Library", tab: "templates" },
-          { href: "/campaigns?tab=calendar", label: "Calendar", tab: "calendar" },
-        ],
+        children: toNavChildren(CAMPAIGNS_TABS, "/campaigns", CAMPAIGNS_DEFAULT_TAB),
       },
-      { href: "/marketing/configuration", label: "Configuration", icon: Settings2 },
+      {
+        href: "/marketing/configuration",
+        label: "Configuration",
+        icon: Settings2,
+        children: toNavChildren(CONFIGURATION_TABS, "/marketing/configuration", CONFIGURATION_DEFAULT_TAB),
+      },
     ],
   },
 ];
@@ -112,8 +137,10 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
                           <div className="ml-7 grid gap-0.5 border-l border-slate-200 pl-3">
                             {item.children.map((child) => {
                               const childIsActive =
-                                pathname.startsWith("/campaigns") &&
-                                searchParams.get("tab") === child.tab;
+                                pathname === item.href &&
+                                (child.tab === null
+                                  ? !searchParams.get("tab")
+                                  : searchParams.get("tab") === child.tab);
 
                               return (
                                 <Link
