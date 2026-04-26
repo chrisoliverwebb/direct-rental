@@ -6,6 +6,7 @@ import type {
   CompanySettings,
   MarketingSettings,
   MessageBrandingSettings,
+  PropertyAvailability,
   SendingSettings,
   UpdatePropertyCalendarSettings,
   UpsertPropertySettings,
@@ -17,6 +18,13 @@ export const useSettings = () =>
   useQuery({
     queryKey: settingsKeys.overview(),
     queryFn: () => settingsApi.getSettings(),
+  });
+
+export const usePropertyBookings = (propertyId: string, enabled = true) =>
+  useQuery({
+    queryKey: settingsKeys.propertyBookings(propertyId),
+    queryFn: () => settingsApi.getPropertyBookings(propertyId),
+    enabled,
   });
 
 const invalidateSettings = async (queryClient: ReturnType<typeof useQueryClient>) => {

@@ -16,9 +16,31 @@ const nullableIntField = z.preprocess(
   (value) => (value === "" || value === null || value === undefined ? null : value),
   z.coerce.number().int().min(0).nullable().optional(),
 );
+const nullableLatitudeField = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? null : value),
+  z.coerce.number().min(-90).max(90).nullable().optional(),
+);
+const nullableLongitudeField = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? null : value),
+  z.coerce.number().min(-180).max(180).nullable().optional(),
+);
+const imageReferenceSchema = z.string().trim().refine(
+  (value) => {
+    if (value.startsWith("data:image/")) {
+      return true;
+    }
+
+    if (value.startsWith("/")) {
+      return true;
+    }
+
+    return z.url().safeParse(value).success;
+  },
+  { message: "Enter a valid image URL or uploaded image value" },
+);
+const nullableImageReferenceField = z.preprocess(blankToNull, imageReferenceSchema.nullable().optional());
 
 export const propertyStatusSchema = z.enum(["ACTIVE", "ARCHIVED"]);
-export const propertyTypeSchema = z.enum(["COTTAGE", "LODGE", "APARTMENT", "HOUSE", "B_AND_B", "OTHER"]);
 export const themeSourceSchema = z.enum(["company", "property"]);
 export const buttonStyleSchema = z.enum(["rounded", "soft", "square"]);
 export const cornerRadiusSchema = z.enum(["small", "medium", "large"]);
@@ -31,6 +53,8 @@ export const addressSchema = z.object({
   region: nullableStringField,
   postcode: nullableStringField,
   country: nullableStringField,
+  latitude: nullableLatitudeField,
+  longitude: nullableLongitudeField,
 });
 
 export type Address = z.infer<typeof addressSchema>;
@@ -66,21 +90,15 @@ export const propertySettingsSchema = z.object({
   status: propertyStatusSchema,
   name: z.string().trim().min(1, "Property name is required"),
   shortName: nullableStringField,
-  propertyType: propertyTypeSchema.nullable().optional(),
-  sleeps: nullableIntField,
+  sleepsMin: nullableIntField,
+  sleepsMax: z.coerce.number().int().min(1, "Maximum sleeps is required"),
   bedrooms: nullableIntField,
   bathrooms: nullableIntField,
-  bookingEmail: nullableEmailField,
-  bookingPhone: nullableStringField,
-  websiteUrl: nullableUrlField,
-  directBookingUrl: nullableUrlField,
-  checkInTime: nullableStringField,
-  checkOutTime: nullableStringField,
   address: addressSchema,
   shortDescription: nullableStringField,
   longDescription: nullableStringField,
-  heroImageUrl: nullableUrlField,
-  galleryImageUrls: z.array(z.string().trim().url()).default([]),
+  heroImageUrl: nullableImageReferenceField,
+  galleryImageUrls: z.array(imageReferenceSchema).max(15, "You can add up to 15 gallery images").default([]),
   themeId: nullableStringField,
 });
 
@@ -125,6 +143,8 @@ export type UpsertPropertyCalendarFeed = z.infer<typeof upsertPropertyCalendarFe
 export const propertyCalendarSettingsSchema = z.object({
   propertyId: z.string().min(1),
   calendarFeeds: z.array(propertyCalendarFeedSchema),
+  checkInTime: nullableStringField,
+  checkOutTime: nullableStringField,
   minimumStayDefault: nullableIntField,
   maximumStayDefault: nullableIntField,
   availabilityWindowDays: nullableIntField,
@@ -144,6 +164,45 @@ export const updatePropertyCalendarSettingsSchema = propertyCalendarSettingsSche
 });
 
 export type UpdatePropertyCalendarSettings = z.infer<typeof updatePropertyCalendarSettingsSchema>;
+
+export const propertyAvailabilityFeedStatusSchema = z.object({
+  sourceName: z.string().trim().min(1),
+  provider: nullableStringField,
+  isConnected: z.boolean(),
+  lastSyncedAt: z.string().trim().min(1),
+});
+
+export type PropertyAvailabilityFeedStatus = z.infer<typeof propertyAvailabilityFeedStatusSchema>;
+
+export const propertyAvailabilityRangeSchema = z.object({
+  externalBookingId: z.string().trim().min(1),
+  creationDate: z.string().trim().min(1),
+  bookingName: z.string().trim().min(1),
+  guestName: nullableStringField,
+  guestEmail: nullableEmailField,
+  guestPhone: nullableStringField,
+  adults: z.coerce.number().int().min(0),
+  children: z.coerce.number().int().min(0),
+  dog: z.boolean().default(false),
+  propertyName: z.string().trim().min(1),
+  unitName: nullableStringField,
+  referrer: nullableStringField,
+  notes: nullableStringField,
+  sourceName: z.string().trim().min(1),
+  startDate: z.string().trim().min(1),
+  endDate: z.string().trim().min(1),
+});
+
+export type PropertyAvailabilityRange = z.infer<typeof propertyAvailabilityRangeSchema>;
+
+export const propertyAvailabilitySchema = z.object({
+  propertyId: z.string().min(1),
+  generatedAt: z.string().trim().min(1),
+  feeds: z.array(propertyAvailabilityFeedStatusSchema),
+  ranges: z.array(propertyAvailabilityRangeSchema),
+});
+
+export type PropertyAvailability = z.infer<typeof propertyAvailabilitySchema>;
 
 export const marketingSettingsSchema = z.object({
   defaultSignOffName: nullableStringField,

@@ -11,6 +11,7 @@ import {
 import {
   archivePropertySettings,
   createPropertySettings,
+  getPropertyAvailability,
   getSettingsOverview,
   updateBrandingSettings,
   updateCompanySettings,
@@ -20,8 +21,23 @@ import {
   updatePropertySettings,
   updateSendingSettings,
 } from "@/mocks/data/settingsData";
+import { getMockCalendarFeed } from "@/mocks/data/propertyCalendarFeeds";
 
 export const settingsHandlers = [
+  http.get("https://calendar.example.test/:feedFile", async ({ request }) => {
+    const calendar = getMockCalendarFeed(request.url);
+
+    if (!calendar) {
+      return new HttpResponse("Not found", { status: 404 });
+    }
+
+    return new HttpResponse(calendar, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/calendar; charset=utf-8",
+      },
+    });
+  }),
   http.get("*/api/v1/settings", async () => HttpResponse.json(getSettingsOverview())),
   http.put("*/api/v1/settings/company", async ({ request }) => {
     const body = companySettingsSchema.parse(await request.json());
@@ -65,6 +81,15 @@ export const settingsHandlers = [
     }
 
     return HttpResponse.json(property);
+  }),
+  http.get("*/api/v1/settings/properties/:propertyId/bookings", async ({ params }) => {
+    const availability = getPropertyAvailability(String(params.propertyId));
+
+    if (!availability) {
+      return HttpResponse.json({ message: "Property not found" }, { status: 404 });
+    }
+
+    return HttpResponse.json(availability);
   }),
   http.put("*/api/v1/settings/properties/:propertyId/calendar", async ({ params, request }) => {
     const body = updatePropertyCalendarSettingsSchema.parse(await request.json());

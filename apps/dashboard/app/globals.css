@@ -1,3 +1,5 @@
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -61,4 +63,64 @@ a {
 
 svg.lucide {
   stroke-width: 1.75;
+}
+
+.leaflet-container {
+  font: inherit;
+  background: hsl(var(--muted));
+}
+
+.property-map-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  z-index: 0;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
+}
+
+.property-leaflet-map,
+.property-leaflet-map .leaflet-pane,
+.property-leaflet-map .leaflet-top,
+.property-leaflet-map .leaflet-bottom,
+.property-leaflet-map .leaflet-control {
+  z-index: 0 !important;
+}
+
+.property-leaflet-map .leaflet-tile-pane {
+  filter: saturate(0.82) contrast(1.04) brightness(1.03) hue-rotate(-8deg);
+}
+
+.property-leaflet-map .leaflet-control-container {
+  display: none;
+}
+
+.property-map-pin-wrapper {
+  background: transparent;
+  border: 0;
+}
+
+.property-map-pin {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px 9999px 9999px 0;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4), transparent 40%),
+    var(--pin-color);
+  transform: rotate(-45deg);
+  box-shadow:
+    0 14px 30px rgba(15, 23, 42, 0.24),
+    0 0 0 8px rgba(255, 255, 255, 0.28);
+}
+
+.property-map-pin span {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
 }

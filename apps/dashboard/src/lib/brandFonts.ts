@@ -92,9 +92,9 @@ export const BRAND_FONTS: BrandFont[] = [
   },
 ];
 
-export const DEFAULT_BRAND_FONT = BRAND_FONTS[0];
+export const DEFAULT_BRAND_FONT: BrandFont = BRAND_FONTS[0]!;
 
-export function getBrandFontById(fontId: string | null | undefined) {
+export function getBrandFontById(fontId: string | null | undefined): BrandFont | undefined {
   if (!fontId) {
     return undefined;
   }
@@ -102,7 +102,7 @@ export function getBrandFontById(fontId: string | null | undefined) {
   return BRAND_FONTS.find((font) => font.id === fontId);
 }
 
-export function getBrandFontByFontFamily(fontFamily: string | null | undefined) {
+export function getBrandFontByFontFamily(fontFamily: string | null | undefined): BrandFont | undefined {
   if (!fontFamily) {
     return undefined;
   }

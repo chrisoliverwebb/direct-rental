@@ -1,4 +1,5 @@
 import { z } from "zod";
+export { GalleryLightbox, type GalleryLightboxItem } from "./lightbox/GalleryLightbox";
 
 export type Nullable<T> = T | null;
 

@@ -4,6 +4,7 @@ import type {
   CompanySettings,
   MarketingSettings,
   MessageBrandingSettings,
+  PropertyAvailability,
   PropertyCalendarSettings,
   PropertySettings,
   SendingSettings,
@@ -12,6 +13,7 @@ import type {
   UpsertPropertySettings,
 } from "@repo/api-contracts";
 import { createId } from "@repo/shared";
+import { buildMockPropertyAvailability } from "@/mocks/data/propertyCalendarFeeds";
 
 let companySettings: CompanySettings = {
   companyName: "Direct Rental Co.",
@@ -27,6 +29,8 @@ let companySettings: CompanySettings = {
     region: "Scotland",
     postcode: "EH2 3AT",
     country: "United Kingdom",
+    latitude: 55.9539,
+    longitude: -3.1966,
   },
   socialLinks: {
     website: "https://directrental.test",
@@ -46,16 +50,10 @@ let propertySettings: PropertySettings[] = [
     status: "ACTIVE",
     name: "Harbour View Cottage",
     shortName: "Harbour View",
-    propertyType: "COTTAGE",
-    sleeps: 4,
+    sleepsMin: 2,
+    sleepsMax: 4,
     bedrooms: 2,
     bathrooms: 1,
-    bookingEmail: "bookings@harbourview.test",
-    bookingPhone: "+44 7700 900101",
-    websiteUrl: "https://directrental.test/harbour-view",
-    directBookingUrl: "https://directrental.test/book/harbour-view",
-    checkInTime: "16:00",
-    checkOutTime: "10:00",
     address: {
       addressLine1: "1 Pier Road",
       addressLine2: null,
@@ -63,11 +61,16 @@ let propertySettings: PropertySettings[] = [
       region: "North Yorkshire",
       postcode: "YO21 3PU",
       country: "United Kingdom",
+      latitude: 54.4858,
+      longitude: -0.6133,
     },
     shortDescription: "Sea-view cottage for couples and small families.",
     longDescription: "A bright coastal cottage with harbour views and a short walk to town.",
-    heroImageUrl: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-    galleryImageUrls: [],
+    heroImageUrl: "/assets/properties/harbour-view-hero.svg",
+    galleryImageUrls: [
+      "/assets/properties/harbour-view-gallery-1.svg",
+      "/assets/properties/harbour-view-gallery-2.svg",
+    ],
     themeId: null,
   },
   {
@@ -75,16 +78,10 @@ let propertySettings: PropertySettings[] = [
     status: "ACTIVE",
     name: "Meadow Lodge",
     shortName: "Meadow",
-    propertyType: "LODGE",
-    sleeps: 6,
+    sleepsMin: null,
+    sleepsMax: 6,
     bedrooms: 3,
     bathrooms: 2,
-    bookingEmail: "stay@meadowlodge.test",
-    bookingPhone: "+44 7700 900102",
-    websiteUrl: "https://directrental.test/meadow-lodge",
-    directBookingUrl: "https://directrental.test/book/meadow-lodge",
-    checkInTime: "15:30",
-    checkOutTime: "10:30",
     address: {
       addressLine1: "12 Birch Lane",
       addressLine2: null,
@@ -92,11 +89,16 @@ let propertySettings: PropertySettings[] = [
       region: "Cumbria",
       postcode: "CA12 4AB",
       country: "United Kingdom",
+      latitude: 54.6012,
+      longitude: -3.1348,
     },
     shortDescription: "Woodland lodge close to walking routes and lake views.",
     longDescription: "A spacious family lodge with private deck and easy access to the fells.",
-    heroImageUrl: "https://images.unsplash.com/photo-1448630360428-65456885c650?auto=format&fit=crop&w=1200&q=80",
-    galleryImageUrls: [],
+    heroImageUrl: "/assets/properties/meadow-lodge-hero.svg",
+    galleryImageUrls: [
+      "/assets/properties/meadow-lodge-gallery-1.svg",
+      "/assets/properties/meadow-lodge-gallery-2.svg",
+    ],
     themeId: "coastal-soft",
   },
 ];
@@ -118,6 +120,8 @@ let bookingAvailabilitySettings: PropertyCalendarSettings[] = [
         icalUrl: "https://calendar.example.test/harbour-view-booking.ics",
       },
     ],
+    checkInTime: "16:00",
+    checkOutTime: "10:00",
     minimumStayDefault: 2,
     maximumStayDefault: 14,
     availabilityWindowDays: 365,
@@ -132,6 +136,8 @@ let bookingAvailabilitySettings: PropertyCalendarSettings[] = [
         icalUrl: "https://calendar.example.test/meadow-lodge-vrbo.ics",
       },
     ],
+    checkInTime: "15:30",
+    checkOutTime: "10:30",
     minimumStayDefault: 3,
     maximumStayDefault: 21,
     availabilityWindowDays: 365,
@@ -241,6 +247,8 @@ export const createPropertySettings = (request: UpsertPropertySettings) => {
     {
       propertyId: nextProperty.id,
       calendarFeeds: [],
+      checkInTime: null,
+      checkOutTime: null,
       minimumStayDefault: null,
       maximumStayDefault: null,
       availabilityWindowDays: null,
@@ -292,6 +300,8 @@ export const updatePropertyCalendarSettings = (propertyId: string, request: Upda
 
     return {
       propertyId,
+      checkInTime: request.checkInTime ?? null,
+      checkOutTime: request.checkOutTime ?? null,
       minimumStayDefault: request.minimumStayDefault ?? null,
       maximumStayDefault: request.maximumStayDefault ?? null,
       availabilityWindowDays: request.availabilityWindowDays ?? null,
@@ -303,4 +313,11 @@ export const updatePropertyCalendarSettings = (propertyId: string, request: Upda
       })),
     };
   });
+};
+
+export const getPropertyAvailability = (propertyId: string): PropertyAvailability | null => {
+  const entry = bookingAvailabilitySettings.find((item) => item.propertyId === propertyId);
+  if (!entry) return null;
+
+  return buildMockPropertyAvailability(propertyId, entry.calendarFeeds);
 };

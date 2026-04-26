@@ -3,6 +3,7 @@ import {
   brandingSettingsSchema,
   marketingSettingsSchema,
   messageBrandingSettingsSchema,
+  propertyAvailabilitySchema,
   propertySettingsSchema,
   sendingSettingsSchema,
   settingsOverviewSchema,
@@ -12,6 +13,7 @@ import {
   type CompanySettings,
   type MarketingSettings,
   type MessageBrandingSettings,
+  type PropertyAvailability,
   type PropertySettings,
   type SendingSettings,
   type SettingsOverview,
@@ -30,6 +32,7 @@ export interface SettingsApi {
   createProperty(request: UpsertPropertySettings): Promise<PropertySettings>;
   updateProperty(propertyId: string, request: UpsertPropertySettings): Promise<PropertySettings>;
   archiveProperty(propertyId: string): Promise<PropertySettings>;
+  getPropertyBookings(propertyId: string): Promise<PropertyAvailability>;
   updatePropertyCalendar(propertyId: string, request: UpdatePropertyCalendarSettings): Promise<void>;
 }
 
@@ -84,6 +87,10 @@ export const settingsApi: SettingsApi = {
     fetcher<PropertySettings>(`/v1/settings/properties/${propertyId}/archive`, {
       method: "POST",
       schema: propertySettingsSchema,
+    }),
+  getPropertyBookings: async (propertyId) =>
+    fetcher<PropertyAvailability>(`/v1/settings/properties/${propertyId}/bookings`, {
+      schema: propertyAvailabilitySchema,
     }),
   updatePropertyCalendar: async (propertyId, request) =>
     fetcher<void>(`/v1/settings/properties/${propertyId}/calendar`, {
