@@ -180,6 +180,21 @@ export const createContactRequestSchema = z.object({
 
 export type CreateContactRequest = z.infer<typeof createContactRequestSchema>;
 
+export const updateContactRequestSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  email: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.email("Enter a valid email address").nullable().optional(),
+  ),
+  phone: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.string().trim().nullable().optional(),
+  ),
+});
+
+export type UpdateContactRequest = z.infer<typeof updateContactRequestSchema>;
+
 export const createContactsRequestSchema = z.object({
   contacts: z.array(createContactRequestSchema).min(1, "At least one contact is required"),
 });

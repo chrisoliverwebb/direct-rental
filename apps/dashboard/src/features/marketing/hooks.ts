@@ -10,6 +10,7 @@ import type {
   GetContactsQuery,
   SendCampaignRequest,
   UpdateCampaignRequest,
+  UpdateContactRequest,
 } from "@repo/api-contracts";
 import { marketingKeys } from "@repo/marketing";
 import { marketingApi } from "@/services/marketing/marketingApi";
@@ -37,6 +38,29 @@ export const useCreateContact = () => {
 
   return useMutation({
     mutationFn: (request: CreateContactRequest) => marketingApi.createContact(request),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.all });
+    },
+  });
+};
+
+export const useUpdateContact = (contactId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: UpdateContactRequest) => marketingApi.updateContact(contactId, request),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: marketingKeys.contact(contactId) });
+      await queryClient.invalidateQueries({ queryKey: [...marketingKeys.all, "contacts"] });
+    },
+  });
+};
+
+export const useDeleteContact = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (contactId: string) => marketingApi.deleteContact(contactId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.all });
     },
@@ -118,6 +142,7 @@ export const useDeleteCampaign = () => {
     mutationFn: (campaignId: string) => marketingApi.deleteCampaign(campaignId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: marketingKeys.draftCampaigns() });
+      await queryClient.invalidateQueries({ queryKey: [...marketingKeys.all, "campaigns"] });
     },
   });
 };

@@ -8,10 +8,12 @@
   /* Backgrounds */
   --background: 0 0% 100%;
   --card: 0 0% 100%;
+  --popover: 0 0% 100%;
 
   /* Foregrounds */
   --foreground: 222 47% 11%;
   --card-foreground: 222 47% 11%;
+  --popover-foreground: 222 47% 11%;
 
   /* Borders — slightly stronger than default to feel grounded */
   --border: 214 16% 91%;

@@ -8,7 +8,7 @@ function InputGroup({ className, ...props }: React.HTMLAttributes<HTMLDivElement
     <div
       data-slot="input-group"
       className={cn(
-        "group/input-group flex h-9 w-full items-stretch rounded-md border border-input bg-background text-sm shadow-xs transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20",
+        "group/input-group flex h-9 w-full items-stretch rounded-md border border-input bg-transparent text-sm shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring",
         "has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-50",
         className,
       )}

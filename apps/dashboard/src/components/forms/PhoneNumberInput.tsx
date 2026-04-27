@@ -123,8 +123,8 @@ export function PhoneNumberInput({
       <div ref={containerRef} className="relative">
         <div
           className={cn(
-            "flex h-9 w-full items-stretch overflow-hidden rounded-md border border-input bg-background ring-offset-background transition",
-            "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            "flex h-9 w-full items-stretch overflow-hidden rounded-md border border-input bg-transparent shadow-sm transition-colors",
+            "focus-within:ring-1 focus-within:ring-ring",
             disabled && "cursor-not-allowed opacity-50",
             error && "border-destructive focus-within:ring-destructive",
           )}

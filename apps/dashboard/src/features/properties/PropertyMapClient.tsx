@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import { env } from "@/lib/env";
 
 const propertyMarkerIcon = createPropertyMarkerIcon("#0f172a");
@@ -47,9 +48,18 @@ export function PropertyMapClient({
           crossOrigin
         />
         <Marker position={[latitude, longitude]} icon={propertyMarkerIcon} />
+        <MapViewUpdater latitude={latitude} longitude={longitude} zoom={zoom} />
       </MapContainer>
     </div>
   );
+}
+
+function MapViewUpdater({ latitude, longitude, zoom }: { latitude: number; longitude: number; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([latitude, longitude], zoom);
+  }, [latitude, longitude, zoom, map]);
+  return null;
 }
 
 function createPropertyMarkerIcon(color: string) {

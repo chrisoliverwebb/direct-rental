@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npm --workspace @repo/dashboard run check-types)",
       "Bash(npx tsc *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(cmd /c \"npm run check-types --workspace @repo/dashboard\")",
+      "Bash(npm run *)",
+      "Bash(npx shadcn@latest add input)",
+      "Bash(npx shadcn@latest *)"
     ]
   }
 }

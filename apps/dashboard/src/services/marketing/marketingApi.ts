@@ -18,6 +18,7 @@ import {
   sendCampaignResponseSchema,
   templateListResponseSchema,
   updateCampaignRequestSchema,
+  updateContactRequestSchema,
   type CampaignDetail,
   type CampaignSummary,
   type ContactDetail,
@@ -37,6 +38,7 @@ import {
   type SendCampaignResponse,
   type TemplateListResponse,
   type UpdateCampaignRequest,
+  type UpdateContactRequest,
 } from "@repo/api-contracts";
 import type { PaginatedResponse } from "@repo/shared";
 import { fetcher } from "@/lib/fetcher";
@@ -68,6 +70,8 @@ export interface MarketingApi {
   getContacts(query: GetContactsQuery): Promise<PaginatedResponse<ContactSummary>>;
   getContact(contactId: string): Promise<ContactDetail>;
   createContact(request: CreateContactRequest): Promise<CreateEntityResponse>;
+  updateContact(contactId: string, request: UpdateContactRequest): Promise<ContactDetail>;
+  deleteContact(contactId: string): Promise<void>;
   importContacts(request: CreateContactsRequest): Promise<ContactImportResult>;
   getDraftCampaigns(): Promise<PaginatedResponse<DraftCampaignSummary>>;
   getCampaigns(query: GetCampaignsQuery): Promise<PaginatedResponse<CampaignSummary>>;
@@ -104,6 +108,14 @@ export const marketingApi: MarketingApi = {
       body: JSON.stringify(createContactRequestSchema.parse(request)),
       schema: createEntityResponseSchema,
     }),
+  updateContact: async (contactId, request) =>
+    fetcher<ContactDetail>(`/v1/marketing/contacts/${contactId}`, {
+      method: "PUT",
+      body: JSON.stringify(updateContactRequestSchema.parse(request)),
+      schema: contactDetailSchema,
+    }),
+  deleteContact: async (contactId) =>
+    fetcher<void>(`/v1/marketing/contacts/${contactId}`, { method: "DELETE" }),
   importContacts: async (request) =>
     fetcher<ContactImportResult>("/v1/marketing/contacts/import", {
       method: "POST",

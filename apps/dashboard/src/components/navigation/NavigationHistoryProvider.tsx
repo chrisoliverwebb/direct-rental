@@ -62,7 +62,9 @@ function writeHistoryState(state: PageHistoryState) {
 
 function getNavigationScope(pathname: string) {
   if (pathname.startsWith("/properties")) return "properties";
-  if (pathname.startsWith("/contacts") || pathname.startsWith("/campaigns") || pathname.startsWith("/marketing")) return "marketing";
+  if (pathname.startsWith("/contacts")) return "contacts";
+  if (pathname.startsWith("/campaigns")) return "campaigns";
+  if (pathname.startsWith("/marketing")) return "marketing";
   if (pathname.startsWith("/settings")) return "settings";
   if (pathname.startsWith("/account")) return "account";
   return "dashboard";
@@ -115,6 +117,38 @@ export function NavigationHistoryProvider({ children }: { children: React.ReactN
       };
       writeHistoryState(nextState);
       setHistoryState(nextState);
+      return;
+    }
+
+    // Navigating "up" to an ancestor path (e.g. /campaigns/123 → /campaigns).
+    // Treat as back-navigation rather than pushing forward, so the list page
+    // never ends up at index > 0 with no valid back destination.
+    const currentEntry = currentScope.entries[currentScope.index];
+    if (currentEntry?.startsWith(routeKey + "/")) {
+      let foundIndex = -1;
+      for (let i = currentScope.index - 1; i >= 0; i--) {
+        if (currentScope.entries[i] === routeKey) {
+          foundIndex = i;
+          break;
+        }
+      }
+
+      if (foundIndex !== -1) {
+        const nextState = { ...current, [scope]: { ...currentScope, index: foundIndex } };
+        writeHistoryState(nextState);
+        setHistoryState(nextState);
+      } else {
+        // Not previously visited — insert before current so forward navigation
+        // still leads back to the detail page.
+        const nextEntries = [
+          ...currentScope.entries.slice(0, currentScope.index),
+          routeKey,
+          ...currentScope.entries.slice(currentScope.index),
+        ];
+        const nextState = { ...current, [scope]: { entries: nextEntries, index: currentScope.index } };
+        writeHistoryState(nextState);
+        setHistoryState(nextState);
+      }
       return;
     }
 

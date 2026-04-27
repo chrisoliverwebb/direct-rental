@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AddressPicker } from "@/components/forms/AddressPicker";
 import { PhoneNumberInput, formatPhoneNumber, parsePhoneNumber, type PhoneCountryCode } from "@/components/forms/PhoneNumberInput";
 import { ColourInput } from "@/components/ui/colour-input";
 import { FontDropdown } from "@/components/forms/FontDropdown";
@@ -192,7 +193,6 @@ export function ConfigurationPage() {
                 hasUnsavedChanges={hasUnsavedCompany}
                 isSaving={updateCompanyMutation.isPending}
                 onSave={saveCompany}
-                saveLabel="Save company info"
               />
             </div>
           </CardHeader>
@@ -234,74 +234,11 @@ export function ConfigurationPage() {
             </div>
 
             <SectionGroup heading="Business address" />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Address line 1">
-                <Input
-                  value={companyDraft.address.addressLine1 ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, addressLine1: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Address line 2">
-                <Input
-                  value={companyDraft.address.addressLine2 ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, addressLine2: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Town / city">
-                <Input
-                  value={companyDraft.address.city ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, city: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="County / region">
-                <Input
-                  value={companyDraft.address.region ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, region: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Postcode">
-                <Input
-                  value={companyDraft.address.postcode ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, postcode: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Country">
-                <Input
-                  value={companyDraft.address.country ?? ""}
-                  onChange={(e) =>
-                    setCompanyDraft({
-                      ...companyDraft,
-                      address: { ...companyDraft.address, country: nullable(e.target.value) },
-                    })
-                  }
-                />
-              </Field>
-            </div>
+            <AddressPicker
+              value={companyDraft.address}
+              onChange={(address) => setCompanyDraft({ ...companyDraft, address })}
+              withPreview={false}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -318,7 +255,6 @@ export function ConfigurationPage() {
                 hasUnsavedChanges={hasUnsavedBranding}
                 isSaving={updateBrandingMutation.isPending}
                 onSave={saveBranding}
-                saveLabel="Save branding"
               />
             </div>
           </CardHeader>
@@ -537,7 +473,6 @@ export function ConfigurationPage() {
                 hasUnsavedChanges={hasUnsavedMessageBranding}
                 isSaving={updateMessageBrandingMutation.isPending}
                 onSave={saveMessageBranding}
-                saveLabel="Save campaign sign offs"
               />
             </div>
           </CardHeader>

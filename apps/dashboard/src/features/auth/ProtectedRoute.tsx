@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageTitleProvider } from "@/components/layout/PageTitleProvider";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { useCurrentUser } from "@/features/auth/hooks";
 
@@ -30,5 +31,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <AppShell compactShell={compactShell}>{children}</AppShell>;
+  return (
+    <PageTitleProvider>
+      <AppShell compactShell={compactShell}>{children}</AppShell>
+    </PageTitleProvider>
+  );
 }

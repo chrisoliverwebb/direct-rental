@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Mail, Users, LogOut, Settings2, Home, EllipsisVertical, CalendarDays, CircleUserRound, PanelLeft } from "lucide-react";
 import { getUserDisplayName } from "@repo/auth";
 import { DirectRentalLockup } from "@repo/brand";
 import { cn } from "@/lib/utils";
+import { usePageTitleContext } from "@/components/layout/PageTitleProvider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,7 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const logoutMutation = useLogoutMutation();
+  const { title: pageTitleOverride, headerActions } = usePageTitleContext();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   if (compactShell) {
@@ -109,7 +111,7 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
   }
 
   const isAccountActive = pathname.startsWith("/account");
-  const pageTitle = getPageTitle(pathname, searchParams);
+  const pageTitle = pageTitleOverride ?? getPageTitle(pathname, searchParams);
 
   return (
     <div className="min-h-screen bg-slate-100/70">
@@ -302,6 +304,31 @@ export function AppShell({ children, compactShell = false }: AppShellProps) {
               <div className="min-w-0">
                 <h1 className="truncate text-base font-normal text-slate-900">{pageTitle}</h1>
               </div>
+              {headerActions.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
+                    <EllipsisVertical className="h-4 w-4" />
+                    <span className="sr-only">Page actions</span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-32">
+                    {headerActions.map((action, i) => {
+                      const prev = headerActions[i - 1];
+                      const showSep = action.destructive && prev && !prev.destructive;
+                      return (
+                        <Fragment key={action.label}>
+                          {showSep ? <DropdownMenuSeparator /> : null}
+                          <DropdownMenuItem
+                            onSelect={action.onClick}
+                            className={action.destructive ? "text-red-600 hover:bg-red-50 focus:bg-red-50" : undefined}
+                          >
+                            {action.label}
+                          </DropdownMenuItem>
+                        </Fragment>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </header>
             <main className="p-3 md:p-5">{children}</main>
           </div>

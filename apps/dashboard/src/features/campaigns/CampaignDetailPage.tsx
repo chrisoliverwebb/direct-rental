@@ -2,16 +2,18 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarClock, Check, Clock3, Mail, MessageSquareText, Pencil, Send, Users } from "lucide-react";
-import { campaignStatusLabel, channelLabel, recipientSelectionLabel, renderEmailDocumentToHtml } from "@repo/marketing";
+import { CalendarClock, Mail, MessageSquareText, Send, Users } from "lucide-react";
+import { channelLabel, recipientSelectionLabel, renderEmailDocumentToHtml } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
-import { PageNavigation } from "@/components/navigation/PageNavigation";
+import { DetailPageHeader } from "@/components/layout/DetailPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/sonner";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
-import { useCampaign, useSendCampaign } from "@/features/marketing/hooks";
+import { useCampaign, useDeleteCampaign, useSendCampaign } from "@/features/marketing/hooks";
 
 export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
   const router = useRouter();
@@ -19,7 +21,9 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
   const pendingScheduledAt = searchParams.get("scheduledAt") ?? undefined;
   const campaignQuery = useCampaign(campaignId);
   const sendMutation = useSendCampaign(campaignId);
+  const deleteMutation = useDeleteCampaign();
   const [now, setNow] = useState(() => Date.now());
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (campaignQuery.data?.status !== "SCHEDULED" || !campaignQuery.data.scheduledAt) {
@@ -74,38 +78,29 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="grid gap-6">
-      <div className="flex items-start gap-4">
-        <div>
-          <PageNavigation
-            items={[
-              { label: "Campaigns", href: "/campaigns" },
-              { label: campaign.name },
-            ]}
-          />
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900">{campaign.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="text-sm text-muted-foreground">{channelLabel(campaign.channel)}</p>
-            <span className="text-muted-foreground/40">·</span>
-            <span
-              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium ${
-                campaign.status === "SENT"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : campaign.status === "SCHEDULED"
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              {campaign.status === "SENT" ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <Clock3 className="h-3.5 w-3.5" />
-              )}
-              {campaignStatusLabel(campaign.status)}
-            </span>
+      <DetailPageHeader
+        title={campaign.name}
+        listHref="/campaigns"
+        listLabel="Campaigns"
+        onEdit={campaign.status !== "SENT" ? () => router.push(`/campaigns/${campaignId}/edit`) : undefined}
+        onDelete={campaign.status !== "SENT" ? () => setDeleteOpen(true) : undefined}
+      >
+        <div className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <div className="grid gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-medium tracking-tight text-slate-900">{campaign.name}</h1>
+              <Badge variant={campaign.status === "SENT" ? "success" : "warning"}>
+                {campaign.status === "SENT" ? "Sent" : "Scheduled"}
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-600">
+              {channelLabel(campaign.channel)}
+              {(campaign.sentAt ?? campaign.scheduledAt) ? ` · ${formatDateTime(campaign.sentAt ?? campaign.scheduledAt)}` : ""}
+            </p>
           </div>
         </div>
         {pendingScheduledAt ? (
-          <div className="ml-auto">
+          <div className="mt-2 flex justify-end">
             <Button
               type="button"
               variant="outline"
@@ -124,18 +119,12 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
             </Button>
           </div>
         ) : null}
-      </div>
+      </DetailPageHeader>
 
-      <Card>
+      <Card className="mx-auto w-full max-w-[1440px]">
         <>
-          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <CardHeader>
             <CardTitle>Campaign details</CardTitle>
-            {isFutureScheduled ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => router.push(`/campaigns/${campaignId}/edit`)}>
-                <Pencil className="mr-2 h-3.5 w-3.5" />
-                Edit campaign
-              </Button>
-            ) : null}
           </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
@@ -224,6 +213,19 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
             </CardContent>
           </>
         </Card>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete campaign"
+        description={`Delete "${campaign.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        isPending={deleteMutation.isPending}
+        onConfirm={async () => {
+          await deleteMutation.mutateAsync(campaignId);
+          toast.success("Campaign deleted");
+          router.push("/campaigns");
+        }}
+      />
     </div>
   );
 }

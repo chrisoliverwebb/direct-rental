@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CampaignSummary } from "@repo/api-contracts";
-import { channelLabel } from "@repo/marketing";
-import { Check, Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { EventMonthCalendar, type EventMonthCalendarEvent } from "@/components/calendar/EventMonthCalendar";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
@@ -151,15 +151,29 @@ function CampaignCalendarView({
       events={events}
       emptyMessage="Start from a campaign starter to create your first send."
       onDateClick={onDateClick}
-      renderEvent={(event) => {
+      renderEvent={(event, context) => {
         const campaign = campaigns.find((entry) => entry.id === event.id);
-        return campaign ? <CampaignCalendarItem campaign={campaign} /> : null;
+        return campaign ? (
+          <CampaignCalendarItem
+            campaign={campaign}
+            continuesBefore={context.continuesBefore}
+            continuesAfter={context.continuesAfter}
+          />
+        ) : null;
       }}
     />
   );
 }
 
-function CampaignCalendarItem({ campaign }: { campaign: CampaignSummary }) {
+function CampaignCalendarItem({
+  campaign,
+  continuesBefore,
+  continuesAfter,
+}: {
+  campaign: CampaignSummary;
+  continuesBefore: boolean;
+  continuesAfter: boolean;
+}) {
   const isCompleted = campaign.status === "SENT" || Boolean(campaign.sentAt);
   const deliveryAt = campaign.sentAt ?? campaign.scheduledAt;
   const timeLabel = deliveryAt
@@ -169,32 +183,25 @@ function CampaignCalendarItem({ campaign }: { campaign: CampaignSummary }) {
   return (
     <Link
       href={`/campaigns/${campaign.id}`}
-      className="relative overflow-hidden rounded-md bg-slate-100 px-1.5 py-1 text-left text-[11px] text-slate-700 transition hover:bg-slate-200"
+      className={cn(
+        "flex h-full w-full items-center gap-1.5 overflow-hidden px-2 text-[11px] transition",
+        isCompleted
+          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+          : "bg-violet-100 text-violet-800 hover:bg-violet-200",
+        continuesBefore && continuesAfter
+          ? ""
+          : continuesBefore
+            ? "rounded-r-md"
+            : continuesAfter
+              ? "rounded-l-md"
+              : "rounded-md",
+      )}
     >
-      <span
-        className={`absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-bl-md ${
-          isCompleted ? "bg-emerald-600 text-white" : "bg-violet-600 text-white"
-        }`}
-        aria-hidden="true"
-      >
-        {isCompleted ? (
-          <Check className="h-3 w-3" />
-        ) : campaign.channel === "EMAIL" ? (
-          <Mail className="h-3 w-3" />
-        ) : (
-          <MessageSquare className="h-3 w-3" />
-        )}
+      <span className="shrink-0 opacity-60" aria-hidden="true">
+        {campaign.channel === "EMAIL" ? <Mail className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />}
       </span>
-      <p className="truncate pr-5 font-medium text-slate-900">{campaign.name}</p>
-      <p className="flex items-center gap-1 truncate text-slate-500">
-        {channelLabel(campaign.channel)}
-        {timeLabel ? (
-          <>
-            <span className="inline-block h-1 w-1 rounded-full bg-slate-400" aria-hidden="true" />
-            {timeLabel}
-          </>
-        ) : null}
-      </p>
+      <p className="truncate font-medium">{campaign.name}</p>
+      {timeLabel ? <p className="ml-auto shrink-0 opacity-70">{timeLabel}</p> : null}
     </Link>
   );
 }

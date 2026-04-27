@@ -1,6 +1,7 @@
 "use client";
 
 import { type ComponentType, type ReactNode, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PropertyAvailabilityRange } from "@repo/api-contracts";
 import { GalleryLightbox } from "@repo/shared";
 import {
@@ -12,16 +13,17 @@ import {
   Images,
   Loader2,
   MapPin,
-  Pencil,
   Users,
 } from "lucide-react";
 import { EventMonthCalendar, type EventMonthCalendarEvent } from "@/components/calendar/EventMonthCalendar";
-import { PageNavigation } from "@/components/navigation/PageNavigation";
+import { DetailPageHeader } from "@/components/layout/DetailPageHeader";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/sonner";
 import { BookingDetailsDialog } from "@/features/properties/BookingDetailsDialog";
 import { PropertyEditorDialog } from "@/features/properties/PropertyEditorDialog";
 import { PropertyMap } from "@/features/properties/PropertyMap";
@@ -32,12 +34,15 @@ import {
   formatPropertyImageCount,
   getPropertyImageSrc,
 } from "@/features/properties/propertyImages";
-import { usePropertyBookings, useSettings } from "@/features/settings/hooks";
+import { useArchivePropertySettings, usePropertyBookings, useSettings } from "@/features/settings/hooks";
 
 export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
+  const router = useRouter();
   const settingsQuery = useSettings();
+  const archiveMutation = useArchivePropertySettings();
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState<PropertyAvailabilityRange | null>(null);
   const calendarInitialMonth = useMemo(() => new Date(), []);
@@ -128,15 +133,15 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
   }
 
   return (
-    <div className="grid gap-4">
-      <div>
-        <PageNavigation
-          items={[
-            { label: "Properties", href: "/properties" },
-            { label: property.name },
-          ]}
-        />
-        <div className="mx-auto mt-2 flex w-full max-w-[1440px] flex-col gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="grid gap-6">
+      <DetailPageHeader
+        title={property.name}
+        listHref="/properties"
+        listLabel="Properties"
+        onEdit={() => setEditOpen(true)}
+        onDelete={() => setDeleteOpen(true)}
+      >
+        <div className="mt-2 flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3">
           <div className="grid gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-medium tracking-tight text-slate-900">{property.name}</h1>
@@ -148,12 +153,8 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
               {property.shortDescription ?? "Internal property summary and operational details."}
             </p>
           </div>
-          <Button variant="outline" className="h-9 whitespace-nowrap" onClick={() => setEditOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
         </div>
-      </div>
+      </DetailPageHeader>
 
       <section className="mx-auto w-full max-w-[1440px]">
         <div className="grid gap-4">
@@ -327,6 +328,19 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
         index={selectedImageIndex}
         onOpenChange={setGalleryOpen}
         onIndexChange={setSelectedImageIndex}
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete property"
+        description="This will archive the property and remove it from your active listings. You can restore it from settings."
+        confirmLabel="Delete"
+        isPending={archiveMutation.isPending}
+        onConfirm={async () => {
+          await archiveMutation.mutateAsync(propertyId);
+          toast.success("Property deleted");
+          router.push("/properties");
+        }}
       />
       <PropertyEditorDialog propertyId={propertyId} open={editOpen} onOpenChange={setEditOpen} />
       <BookingDetailsDialog

@@ -8,7 +8,7 @@ type SaveStatusActionsProps = {
   hasUnsavedChanges: boolean;
   isSaving: boolean;
   onSave: () => void | Promise<void>;
-  saveLabel: string;
+  saveLabel?: string;
   disabled?: boolean;
 };
 
@@ -16,12 +16,15 @@ export function SaveStatusActions({
   hasUnsavedChanges,
   isSaving,
   onSave,
-  saveLabel,
+  saveLabel = "Save",
   disabled = false,
 }: SaveStatusActionsProps) {
   return (
     <div className="flex items-center gap-2">
-      <Badge variant={hasUnsavedChanges ? "warning" : "secondary"}>
+      <Badge
+        variant={hasUnsavedChanges ? "warning" : "secondary"}
+        className="h-9 px-3 text-xs"
+      >
         {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
       </Badge>
       <Button type="button" onClick={() => void onSave()} disabled={disabled || isSaving || !hasUnsavedChanges}>
