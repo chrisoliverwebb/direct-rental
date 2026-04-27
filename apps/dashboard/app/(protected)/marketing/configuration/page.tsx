@@ -1,5 +1,5 @@
-import { ConfigurationPage } from "@/features/settings/ConfigurationPage";
+import { redirect } from "next/navigation";
 
 export default function MarketingConfigurationRoute() {
-  return <ConfigurationPage />;
+  redirect("/settings");
 }

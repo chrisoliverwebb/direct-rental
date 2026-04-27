@@ -1,5 +1,5 @@
-import { ContactCreatePage } from "@/features/contacts/ContactCreatePage";
+import { redirect } from "next/navigation";
 
 export default function NewContactRoute() {
-  return <ContactCreatePage />;
+  redirect("/contacts");
 }

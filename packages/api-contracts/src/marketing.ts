@@ -110,7 +110,8 @@ export type GetContactsQuery = z.infer<typeof getContactsQuerySchema>;
 export const getCampaignsQuerySchema = z.object({
   page: z.number().int().min(1).optional(),
   pageSize: z.number().int().min(1).max(100).optional(),
-  channel: campaignChannelSchema.optional(),
+  search: z.string().trim().min(1).optional(),
+  channels: z.array(campaignChannelSchema).min(1).optional(),
   status: campaignStatusSchema.optional(),
   sortDirection: z.enum(["asc", "desc"]).optional(),
 });

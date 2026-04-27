@@ -64,7 +64,8 @@ export const marketingHandlers = [
     const query = getCampaignsQuerySchema.parse({
       page: url.searchParams.get("page") ? Number(url.searchParams.get("page")) : undefined,
       pageSize: url.searchParams.get("pageSize") ? Number(url.searchParams.get("pageSize")) : undefined,
-      channel: url.searchParams.get("channel") ?? undefined,
+      search: url.searchParams.get("search") ?? undefined,
+      channels: url.searchParams.getAll("channels").length > 0 ? url.searchParams.getAll("channels") : undefined,
       status: url.searchParams.get("status") ?? undefined,
       sortDirection: url.searchParams.get("sortDirection") ?? undefined,
     });

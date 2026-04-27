@@ -6,8 +6,13 @@ import { Info, Mail, MessageSquare, Search } from "lucide-react";
 import { contactStatusLabel } from "@repo/marketing";
 import { formatDate } from "@repo/shared";
 import { useState } from "react";
+import { DEFAULT_DATA_TABLE_PAGE_SIZE } from "@/components/data-table/constants";
+import { DataTablePanel } from "@/components/data-table/DataTablePanel";
+import { DataTableToolbar } from "@/components/data-table/DataTableToolbar";
+import { PageNavigation } from "@/components/navigation/PageNavigation";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { AddButton } from "@/components/ui/AddButton";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { TabbedPage } from "@/components/layout/TabbedPage";
 import {
   Table,
@@ -20,6 +25,7 @@ import {
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
+import { ContactCreateDialog } from "@/features/contacts/ContactCreateDialog";
 import { usePageTab } from "@/hooks/usePageTab";
 import { CONTACTS_TABS, CONTACTS_DEFAULT_TAB, type ContactsTab } from "@/lib/pageTabConfigs";
 import { useContacts } from "@/features/marketing/hooks";
@@ -28,6 +34,9 @@ export function ContactsPage() {
   const router = useRouter();
   const [activeTab, setTab] = usePageTab<ContactsTab>(CONTACTS_TABS, CONTACTS_DEFAULT_TAB);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_DATA_TABLE_PAGE_SIZE);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const statusFilter: "SUBSCRIBED" | "UNSUBSCRIBED" | undefined =
     activeTab === "subscribed" ? "SUBSCRIBED" :
@@ -35,36 +44,45 @@ export function ContactsPage() {
     undefined;
 
   const contactsQuery = useContacts({
-    page: 1,
-    pageSize: 10,
+    page,
+    pageSize,
     search: search || undefined,
     status: statusFilter,
   });
 
+  const totalPages = contactsQuery.data?.totalPages ?? 1;
+  const totalItems = contactsQuery.data?.totalItems ?? 0;
+
   return (
     <TabbedPage
       title="Contacts"
-      action={
-        <Link
-          href="/contacts/new"
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          New contact
-        </Link>
-      }
+      navigation={<PageNavigation items={[{ label: "Contacts" }]} />}
       tabs={CONTACTS_TABS}
       activeTab={activeTab}
-      onTabChange={setTab}
-      beforeTabs={
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search contacts"
-            className="pl-9"
-          />
-        </div>
+      onTabChange={(tab) => {
+        setTab(tab);
+        setPage(1);
+      }}
+      tabsTrailing={
+        <DataTableToolbar>
+          <InputGroup className="h-9 max-w-xs">
+            <InputGroupAddon>
+              <Search className="text-slate-400" />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search contacts"
+            />
+            <InputGroupAddon align="inline-end">
+              {contactsQuery.data ? `${contactsQuery.data.totalItems} results` : null}
+            </InputGroupAddon>
+          </InputGroup>
+          <AddButton label="Add Contact" onClick={() => setCreateOpen(true)} />
+        </DataTableToolbar>
       }
     >
       {contactsQuery.isLoading ? <LoadingState rows={6} /> : null}
@@ -82,7 +100,20 @@ export function ContactsPage() {
         />
       ) : null}
       {contactsQuery.data && contactsQuery.data.items.length > 0 ? (
-        <div className="rounded-lg border bg-white">
+        <DataTablePanel
+          pagination={{
+            page,
+            pageSize,
+            totalPages,
+            totalItems,
+            itemLabel: "contacts",
+            onPageChange: setPage,
+            onPageSizeChange: (nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            },
+          }}
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -163,8 +194,10 @@ export function ContactsPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataTablePanel>
       ) : null}
+
+      <ContactCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
     </TabbedPage>
   );
 }

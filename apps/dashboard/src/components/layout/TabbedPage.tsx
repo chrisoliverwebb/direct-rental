@@ -1,9 +1,10 @@
-import { TabSelector } from "@/components/ui/tab-selector";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type TabbedPageProps<T extends string> = {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  navigation?: React.ReactNode;
   tabs: ReadonlyArray<{ value: T; label: string }>;
   activeTab: T;
   onTabChange: (tab: T) => void;
@@ -16,6 +17,7 @@ export function TabbedPage<T extends string>({
   title,
   description,
   action,
+  navigation,
   tabs,
   activeTab,
   onTabChange,
@@ -24,24 +26,46 @@ export function TabbedPage<T extends string>({
   children,
 }: TabbedPageProps<T>) {
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+    <div className="grid gap-4">
+      {navigation}
+      {(description || action) ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          {description ? (
+            <div className="grid gap-1">
+              <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+          ) : (
+            <div />
+          )}
+          {action ?? null}
         </div>
-        {action ?? null}
-      </div>
+      ) : null}
 
-      <div className="grid gap-3">
+      <div className="grid gap-2.5">
         {beforeTabs}
         {tabsTrailing ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <TabSelector options={tabs} value={activeTab} onChange={onTabChange} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs value={activeTab} onValueChange={(tab) => onTabChange(tab as T)}>
+              <TabsList>
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
             {tabsTrailing}
           </div>
         ) : (
-          <TabSelector options={tabs} value={activeTab} onChange={onTabChange} />
+          <Tabs value={activeTab} onValueChange={(tab) => onTabChange(tab as T)}>
+            <TabsList>
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
       </div>
 

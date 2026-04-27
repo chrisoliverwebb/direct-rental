@@ -460,17 +460,27 @@ export const listDraftCampaigns = () => ({
 export const listCampaigns = ({
   page = 1,
   pageSize = 10,
-  channel,
+  search,
+  channels,
   status,
   sortDirection = "desc",
 }: GetCampaignsQuery = {}) => {
+  const normalizedSearch = search?.toLowerCase().trim();
   const sourceItems =
     status === "DRAFT"
       ? draftCampaigns.map(toDraftCampaignAsCampaignSummary)
       : campaigns.map(toCampaignSummary);
 
   const filtered = sourceItems
-    .filter((campaign) => (channel ? campaign.channel === channel : true))
+    .filter((campaign) => {
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const haystack = `${campaign.name} ${campaign.subject ?? ""} ${campaign.channel} ${campaign.status}`.toLowerCase();
+      return haystack.includes(normalizedSearch);
+    })
+    .filter((campaign) => (channels?.length ? channels.includes(campaign.channel) : true))
     .filter((campaign) => (status ? campaign.status === status : true))
     .sort((left, right) => {
       const leftDate = left.sentAt ?? left.scheduledAt ?? left.createdAt;

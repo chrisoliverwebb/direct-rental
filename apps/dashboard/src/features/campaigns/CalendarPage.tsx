@@ -7,7 +7,6 @@ import type { CampaignSummary } from "@repo/api-contracts";
 import { channelLabel } from "@repo/marketing";
 import { Check, Mail, MessageSquare } from "lucide-react";
 import { EventMonthCalendar, type EventMonthCalendarEvent } from "@/components/calendar/EventMonthCalendar";
-import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { useCampaigns, useDraftCampaigns, useTemplates } from "@/features/marketing/hooks";
@@ -55,17 +54,7 @@ export function CalendarPage() {
   };
 
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Calendar</h1>
-          <p className="text-sm text-muted-foreground">View your scheduled and sent campaigns on the calendar.</p>
-        </div>
-        <Button type="button" onClick={() => openCreateFlow()}>
-          New campaign
-        </Button>
-      </div>
-
+    <div className="grid gap-4">
       {campaignsQuery.isLoading ? <LoadingState rows={5} /> : null}
       {campaignsQuery.isError ? (
         <ErrorState

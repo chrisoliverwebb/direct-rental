@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UpdatePropertyCalendarSettings, UpsertPropertySettings } from "@repo/api-contracts";
+import { Search } from "lucide-react";
+import { DEFAULT_DATA_TABLE_PAGE_SIZE } from "@/components/data-table/constants";
+import { DataTablePanel } from "@/components/data-table/DataTablePanel";
+import { DataTableToolbar } from "@/components/data-table/DataTableToolbar";
+import { PageNavigation } from "@/components/navigation/PageNavigation";
 import { useAccount } from "@/features/account/hooks";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
+import { AddButton } from "@/components/ui/AddButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InfoBox } from "@/components/ui/InfoBox";
+import { PopUp } from "@/components/ui/PopUp";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { toast } from "@/components/ui/sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -29,16 +38,56 @@ export function PropertiesListPage() {
   const accountQuery = useAccount();
   const createPropertyMutation = useCreatePropertySettings();
   const updatePropertyCalendarMutation = useUpdatePropertyCalendarSettings();
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_DATA_TABLE_PAGE_SIZE);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [limitAlertOpen, setLimitAlertOpen] = useState(false);
   const [propertyDraft, setPropertyDraft] = useState<UpsertPropertySettings>(createEmptyPropertyDraft());
   const [calendarDraft, setCalendarDraft] = useState<UpdatePropertyCalendarSettings>(createEmptyCalendarDraft());
 
   const properties = settingsQuery.data?.properties ?? [];
+  const normalizedSearch = search.toLowerCase().trim();
+  const filteredProperties = useMemo(
+    () =>
+      properties.filter((property) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const haystack = [
+          property.name,
+          property.shortName,
+          property.address.addressLine1,
+          property.address.city,
+          property.address.region,
+          property.address.postcode,
+          property.address.country,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(normalizedSearch);
+      }),
+    [normalizedSearch, properties],
+  );
+  const paginatedProperties = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredProperties.slice(startIndex, startIndex + pageSize);
+  }, [filteredProperties, page, pageSize]);
+  const totalItems = filteredProperties.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const activeCount = properties.filter((p) => p.status === "ACTIVE").length;
   const maxProperties = accountQuery.data?.subscription?.maxProperties ?? null;
   const atLimit = maxProperties !== null && activeCount >= maxProperties;
 
   const openDialog = () => {
+    if (atLimit) {
+      setLimitAlertOpen(true);
+      return;
+    }
+
     setPropertyDraft(createEmptyPropertyDraft());
     setCalendarDraft(createEmptyCalendarDraft());
     setIsDialogOpen(true);
@@ -74,31 +123,54 @@ export function PropertiesListPage() {
   }
 
   return (
-    <div className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Properties</h1>
-          <p className="text-sm text-muted-foreground">Manage your rental properties and their settings.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {maxProperties !== null ? <PropertyUsagePill used={activeCount} max={maxProperties} /> : null}
-          <div className="relative">
-            <Button onClick={openDialog} disabled={atLimit}>
-              New property
-            </Button>
-            {atLimit ? (
-              <p className="absolute -bottom-5 right-0 whitespace-nowrap text-xs text-muted-foreground">
-                Subscription limit reached
-              </p>
-            ) : null}
-          </div>
-        </div>
+    <div className="grid gap-4">
+      <PageNavigation items={[{ label: "Properties" }]} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <DataTableToolbar>
+          <InputGroup className="h-9 max-w-xs">
+            <InputGroupAddon>
+              <Search className="text-slate-400" />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search properties"
+            />
+            <InputGroupAddon align="inline-end">
+              {`${filteredProperties.length} results`}
+            </InputGroupAddon>
+          </InputGroup>
+        </DataTableToolbar>
+        <AddButton label="Add Property" onClick={openDialog} />
       </div>
 
-      {properties.length === 0 ? (
-        <EmptyState title="No properties yet" description="Add your first property to get started." />
+      {filteredProperties.length === 0 ? (
+        <EmptyState
+          title={properties.length === 0 ? "No properties yet" : "No properties found"}
+          description={
+            properties.length === 0
+              ? "Add your first property to get started."
+              : "Try broadening the search or clearing filters."
+          }
+        />
       ) : (
-        <div className="rounded-lg border bg-white">
+        <DataTablePanel
+          pagination={{
+            page,
+            pageSize,
+            totalPages,
+            totalItems,
+            itemLabel: "properties",
+            onPageChange: setPage,
+            onPageSizeChange: (nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            },
+          }}
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -112,7 +184,7 @@ export function PropertiesListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {properties.map((property) => (
+              {paginatedProperties.map((property) => (
                 <TableRow
                   key={property.id}
                   className="cursor-pointer"
@@ -142,7 +214,7 @@ export function PropertiesListPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataTablePanel>
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -151,6 +223,16 @@ export function PropertiesListPage() {
             <DialogTitle>New property</DialogTitle>
           </DialogHeader>
           <DialogBody className="grid gap-6">
+            {maxProperties !== null ? (
+              <InfoBox
+                title={atLimit ? "No property slots remaining" : `${Math.max(maxProperties - activeCount, 0)} property slots remaining`}
+                description={
+                  atLimit
+                    ? `You have used all ${maxProperties} property slots on your current plan.`
+                    : `${activeCount} of ${maxProperties} properties are currently in use on this plan.`
+                }
+              />
+            ) : null}
             <PropertyDetailsSection propertyDraft={propertyDraft} setPropertyDraft={setPropertyDraft} />
             <PropertyBookingSection calendarDraft={calendarDraft} setCalendarDraft={setCalendarDraft} />
           </DialogBody>
@@ -171,28 +253,16 @@ export function PropertiesListPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function PropertyUsagePill({ used, max }: { used: number; max: number }) {
-  const atLimit = used >= max;
-  const isNearLimit = used / max >= 0.8;
-
-  return (
-    <div
-      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${
-        atLimit
-          ? "border-red-200 bg-red-50 text-red-700"
-          : isNearLimit
-            ? "border-amber-200 bg-amber-50 text-amber-700"
-            : "border-slate-200 bg-slate-50 text-slate-600"
-      }`}
-    >
-      <span>
-        {used} / {max} properties
-      </span>
-      {atLimit ? <span className="text-red-500">•</span> : null}
+      <PopUp
+        open={limitAlertOpen}
+        onOpenChange={setLimitAlertOpen}
+        title="No properties remaining"
+        description={
+          maxProperties !== null
+            ? `You have already used all ${maxProperties} property slots on your current plan.`
+            : "You cannot add another property right now."
+        }
+      />
     </div>
   );
 }

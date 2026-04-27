@@ -84,7 +84,7 @@ export function ConfigurationPage() {
   if (settingsQuery.isError) {
     return (
       <ErrorState
-        title="Configuration unavailable"
+        title="Settings unavailable"
         description={settingsQuery.error.message}
         onRetry={() => settingsQuery.refetch()}
       />
@@ -174,8 +174,7 @@ export function ConfigurationPage() {
 
   return (
     <TabbedPage
-      title="Configuration"
-      description="Company, branding, and campaign sign-off configuration."
+      title="Settings"
       tabs={CONFIGURATION_TABS}
       activeTab={activeTab}
       onTabChange={setTab}

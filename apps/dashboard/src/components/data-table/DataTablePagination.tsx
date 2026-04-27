@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DATA_TABLE_PAGE_SIZE_OPTIONS } from "@/components/data-table/constants";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 
@@ -9,6 +10,7 @@ type DataTablePaginationProps = {
   pageSize: number;
   totalPages: number;
   totalItems: number;
+  itemLabel?: string;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 };
@@ -18,15 +20,16 @@ export function DataTablePagination({
   pageSize,
   totalPages,
   totalItems,
+  itemLabel = "items",
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps) {
   return (
-    <div className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-muted-foreground">
-        Page {page} of {totalPages} · {totalItems} campaigns
+        {`Page ${page} of ${totalPages} · ${totalItems} ${itemLabel}`}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Rows</span>
           <Select
@@ -34,7 +37,7 @@ export function DataTablePagination({
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             className="w-[88px]"
           >
-            {[10, 20, 50].map((size) => (
+            {DATA_TABLE_PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
                 {size}
               </option>

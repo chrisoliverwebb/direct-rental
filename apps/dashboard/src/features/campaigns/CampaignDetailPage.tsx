@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, Check, Clock3, Mail, MessageSquareText, Pencil, Send, Users } from "lucide-react";
 import { campaignStatusLabel, channelLabel, recipientSelectionLabel, renderEmailDocumentToHtml } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
-import { BackButton } from "@/components/navigation/BackButton";
+import { PageNavigation } from "@/components/navigation/PageNavigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +76,12 @@ export function CampaignDetailPage({ campaignId }: { campaignId: string }) {
     <div className="grid gap-6">
       <div className="flex items-start gap-4">
         <div>
-          <BackButton href="/campaigns" label="Back to campaigns" />
+          <PageNavigation
+            items={[
+              { label: "Campaigns", href: "/campaigns" },
+              { label: campaign.name },
+            ]}
+          />
           <h1 className="mt-2 text-2xl font-semibold text-slate-900">{campaign.name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <p className="text-sm text-muted-foreground">{channelLabel(campaign.channel)}</p>

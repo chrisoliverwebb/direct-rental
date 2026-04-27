@@ -12,15 +12,19 @@ import {
 import type { CampaignSummary } from "@repo/api-contracts";
 import { campaignStatusLabel, recipientSelectionLabel } from "@repo/marketing";
 import { formatDateTime } from "@repo/shared";
-import { SlidersHorizontal } from "lucide-react";
+import { MessagesSquare, Search } from "lucide-react";
+import { DEFAULT_DATA_TABLE_PAGE_SIZE } from "@/components/data-table/constants";
+import { PageNavigation } from "@/components/navigation/PageNavigation";
+import { AddButton } from "@/components/ui/AddButton";
 import { DataTableColumnHeader } from "@/components/data-table/DataTableColumnHeader";
-import { DataTablePagination } from "@/components/data-table/DataTablePagination";
+import { DataTablePanel } from "@/components/data-table/DataTablePanel";
+import { DataTableToolbar } from "@/components/data-table/DataTableToolbar";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { MultiSelect } from "@/components/ui/MultiSelect";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TabbedPage } from "@/components/layout/TabbedPage";
 import { usePageTab } from "@/hooks/usePageTab";
@@ -31,21 +35,25 @@ import { CreateCampaignDialog, type TemplateLibraryChannelTab } from "@/features
 import { useCampaigns, useDraftCampaigns, useTemplates } from "@/features/marketing/hooks";
 import { useSettings } from "@/features/settings/hooks";
 
-type ChannelFilter = "ALL" | CampaignSummary["channel"];
 type SortDirection = "asc" | "desc";
+const CHANNEL_OPTIONS = [
+  { value: "EMAIL", label: "Email" },
+  { value: "SMS", label: "SMS" },
+] as const;
+const DEFAULT_CHANNEL_FILTERS: CampaignSummary["channel"][] = ["EMAIL", "SMS"];
 
 export function CampaignsPage() {
   const router = useRouter();
   const [activeTab, setTab] = usePageTab<CampaignsTab>(CAMPAIGNS_TABS, CAMPAIGNS_DEFAULT_TAB);
-  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("ALL");
+  const [channelFilter, setChannelFilter] = useState<CampaignSummary["channel"][]>(DEFAULT_CHANNEL_FILTERS);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(DEFAULT_DATA_TABLE_PAGE_SIZE);
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createStep, setCreateStep] = useState<"channel" | "template">("channel");
   const [createChannel, setCreateChannel] = useState<TemplateLibraryChannelTab | null>(null);
   const [createScheduledAt, setCreateScheduledAt] = useState<string | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const draftCampaignsQuery = useDraftCampaigns();
   const templatesQuery = useTemplates();
@@ -58,14 +66,44 @@ export function CampaignsPage() {
   const campaignsQuery = useCampaigns({
     page,
     pageSize,
-    channel: channelFilter === "ALL" ? undefined : channelFilter,
+    search: search || undefined,
+    channels:
+      channelFilter.length === 0 || channelFilter.length === DEFAULT_CHANNEL_FILTERS.length
+        ? undefined
+        : channelFilter,
     status: effectiveStatusFilter,
     sortDirection,
   });
 
-  const items = useMemo(() => campaignsQuery.data?.items ?? [], [campaignsQuery.data?.items]);
-  const totalPages = campaignsQuery.data?.totalPages ?? 1;
-  const totalItems = campaignsQuery.data?.totalItems ?? 0;
+  const normalizedSearch = search.toLowerCase().trim();
+  const serverItems = useMemo(() => campaignsQuery.data?.items ?? [], [campaignsQuery.data?.items]);
+  const items = useMemo(
+    () =>
+      serverItems.filter((campaign) => {
+        if (channelFilter.length === 0) {
+          return false;
+        }
+
+        if (!channelFilter.includes(campaign.channel)) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const haystack =
+          `${campaign.name} ${campaign.subject ?? ""} ${campaign.channel} ${campaign.status}`.toLowerCase();
+        return haystack.includes(normalizedSearch);
+      }),
+    [normalizedSearch, serverItems],
+  );
+  const totalPages = normalizedSearch && campaignsQuery.data && campaignsQuery.data.items.length === campaignsQuery.data.totalItems
+    ? Math.max(1, Math.ceil(items.length / pageSize))
+    : (campaignsQuery.data?.totalPages ?? 1);
+  const totalItems = normalizedSearch && campaignsQuery.data && campaignsQuery.data.items.length === campaignsQuery.data.totalItems
+    ? items.length
+    : (campaignsQuery.data?.totalItems ?? 0);
 
   const columns = useMemo<ColumnDef<CampaignSummary>[]>(
     () => [
@@ -133,81 +171,48 @@ export function CampaignsPage() {
     setCreateOpen(true);
   };
 
-  const filtersButton = (
-    <Button
-      type="button"
-      variant={filtersOpen || channelFilter !== "ALL" ? "secondary" : "ghost"}
-      size="sm"
-      className="rounded-lg"
-      onClick={() => setFiltersOpen((open) => !open)}
-    >
-      <SlidersHorizontal className="mr-2 h-4 w-4" />
-      Filters
-      {channelFilter !== "ALL" ? (
-        <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-[10px]">
-          1
-        </Badge>
-      ) : null}
-    </Button>
-  );
-
   return (
     <TabbedPage
       title="Campaigns"
-      action={
-        <Button type="button" onClick={() => openCreateFlow()}>
-          New campaign
-        </Button>
-      }
+      navigation={<PageNavigation items={[{ label: "Campaigns" }]} />}
       tabs={CAMPAIGNS_TABS}
       activeTab={activeTab}
       onTabChange={(tab) => {
         setTab(tab);
         setPage(1);
       }}
-      tabsTrailing={filtersButton}
+      tabsTrailing={
+        <DataTableToolbar>
+          <InputGroup className="h-9 max-w-xs">
+            <InputGroupAddon>
+              <Search className="text-slate-400" />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search campaigns"
+            />
+            <InputGroupAddon align="inline-end">
+              {campaignsQuery.data ? `${campaignsQuery.data.totalItems} results` : null}
+            </InputGroupAddon>
+          </InputGroup>
+          <MultiSelect
+            label="Channels"
+            options={[...CHANNEL_OPTIONS]}
+            values={channelFilter}
+            icon={MessagesSquare}
+            onValuesChange={(values) => {
+              setChannelFilter(values as CampaignSummary["channel"][]);
+              resetToFirstPage();
+            }}
+          />
+          <AddButton label="Add Campaign" onClick={() => openCreateFlow()} />
+        </DataTableToolbar>
+      }
     >
-      {filtersOpen ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
-            <div className="grid gap-0.5">
-              <p className="text-sm font-medium text-slate-900">Filters</p>
-              <p className="text-xs text-slate-500">Refine the current campaign list.</p>
-            </div>
-            {channelFilter !== "ALL" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setChannelFilter("ALL");
-                  resetToFirstPage();
-                }}
-              >
-                Clear filters
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-end gap-3 p-4">
-            <label className="grid gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
-              <Select
-                value={channelFilter}
-                onChange={(event) => {
-                  setChannelFilter(event.target.value as ChannelFilter);
-                  resetToFirstPage();
-                }}
-                className="min-w-[140px]"
-              >
-                <option value="ALL">All channels</option>
-                <option value="EMAIL">Email</option>
-                <option value="SMS">SMS</option>
-              </Select>
-            </label>
-          </div>
-        </div>
-      ) : null}
-
       <CreateCampaignDialog
         open={createOpen}
         step={createStep}
@@ -255,17 +260,22 @@ export function CampaignsPage() {
         />
       ) : null}
 
-      {campaignsQuery.data ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="h-7 w-fit px-2.5 text-[11px] font-medium">
-            {totalItems} {activeTab === "scheduled" ? "scheduled" : activeTab === "sent" ? "sent" : "draft"} campaign{totalItems === 1 ? "" : "s"}
-          </Badge>
-        </div>
-      ) : null}
-
       <section className="grid gap-3">
         {campaignsQuery.data ? (
-          <div className="rounded-lg border bg-white">
+          <DataTablePanel
+            pagination={{
+              page,
+              pageSize,
+              totalPages,
+              totalItems,
+              itemLabel: "campaigns",
+              onPageChange: setPage,
+              onPageSizeChange: (nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              },
+            }}
+          >
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -307,18 +317,7 @@ export function CampaignsPage() {
                 )}
               </TableBody>
             </Table>
-            <DataTablePagination
-              page={page}
-              pageSize={pageSize}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              onPageChange={setPage}
-              onPageSizeChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(1);
-              }}
-            />
-          </div>
+          </DataTablePanel>
         ) : null}
       </section>
     </TabbedPage>

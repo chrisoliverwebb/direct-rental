@@ -41,10 +41,19 @@ import {
 import type { PaginatedResponse } from "@repo/shared";
 import { fetcher } from "@/lib/fetcher";
 
-const buildQueryString = (query: Record<string, string | number | undefined>) => {
+const buildQueryString = (query: Record<string, string | number | string[] | undefined>) => {
   const searchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(query)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== "") {
+          searchParams.append(key, item);
+        }
+      }
+      continue;
+    }
+
     if (value !== undefined && value !== "") {
       searchParams.set(key, String(value));
     }

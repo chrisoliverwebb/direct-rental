@@ -16,12 +16,12 @@ import {
   Users,
 } from "lucide-react";
 import { EventMonthCalendar, type EventMonthCalendarEvent } from "@/components/calendar/EventMonthCalendar";
-import { BackButton } from "@/components/navigation/BackButton";
+import { PageNavigation } from "@/components/navigation/PageNavigation";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingDetailsDialog } from "@/features/properties/BookingDetailsDialog";
 import { PropertyEditorDialog } from "@/features/properties/PropertyEditorDialog";
 import { PropertyMap } from "@/features/properties/PropertyMap";
@@ -128,13 +128,18 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       <div>
-        <BackButton href="/properties" label="Back to properties" />
-        <div className="mx-auto mt-3 flex w-full max-w-[1440px] flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="grid gap-2">
+        <PageNavigation
+          items={[
+            { label: "Properties", href: "/properties" },
+            { label: property.name },
+          ]}
+        />
+        <div className="mx-auto mt-2 flex w-full max-w-[1440px] flex-col gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="grid gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{property.name}</h1>
+              <h1 className="text-xl font-medium tracking-tight text-slate-900">{property.name}</h1>
               <Badge variant={property.status === "ACTIVE" ? "success" : "outline"}>
                 {property.status === "ACTIVE" ? "Active" : "Archived"}
               </Badge>
@@ -143,7 +148,7 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
               {property.shortDescription ?? "Internal property summary and operational details."}
             </p>
           </div>
-          <Button onClick={() => setEditOpen(true)}>
+          <Button variant="outline" className="h-9 whitespace-nowrap" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit
           </Button>
@@ -151,9 +156,9 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
       </div>
 
       <section className="mx-auto w-full max-w-[1440px]">
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           <Card className="border-slate-200">
-            <CardContent className="grid gap-4 p-4 lg:grid-cols-3 lg:items-stretch">
+            <CardContent className="grid gap-3 p-3 lg:grid-cols-3 lg:items-stretch">
               <div className="grid h-full gap-2">
                 <button
                   type="button"
@@ -188,11 +193,11 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
           </Card>
 
           <Card className="border-slate-200">
-            <CardHeader className="pb-3">
-              <CardTitle>Overview</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">Overview</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4">
-              <p className="text-sm leading-7 text-slate-700">{description}</p>
+            <CardContent className="grid gap-3">
+              <p className="text-sm leading-6 text-slate-700">{description}</p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <SummaryStat
                   icon={Users}
@@ -241,15 +246,15 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
           </Card>
 
           <Card className="border-slate-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
                 <CalendarDays className="h-4 w-4 text-slate-500" />
                 Bookings
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid gap-3">
               {calendar?.calendarFeeds.length ? (
-                <div className="grid gap-4">
+                <div className="grid gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     {(bookingsQuery.data?.feeds ?? []).map((feed) => (
                       <Badge key={feed.sourceName} variant="outline" className="flex items-center gap-2 bg-slate-50 py-1.5">
@@ -276,7 +281,7 @@ export function PropertyDetailPage({ propertyId }: { propertyId: string }) {
                   ) : null}
 
                   {!bookingsQuery.isLoading && !bookingsQuery.isError ? (
-                    <div className="grid gap-4">
+                    <div className="grid gap-3">
                       <div className="overflow-hidden rounded-lg border border-slate-200">
                         <EventMonthCalendar
                           initialMonth={calendarInitialMonth}
@@ -355,8 +360,8 @@ function SummaryStat({
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-          <p className="text-base font-semibold text-slate-900">{value}</p>
+          <p className="text-xs font-normal text-slate-500">{label}</p>
+          <p className="text-base font-medium text-slate-900">{value}</p>
         </div>
       </div>
       {action}
@@ -386,8 +391,8 @@ function ImageGallerySummaryCard({
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-          <p className="text-base font-semibold text-slate-900">{value}</p>
+          <p className="text-xs font-normal text-slate-500">{label}</p>
+          <p className="text-base font-medium text-slate-900">{value}</p>
         </div>
       </div>
       <div className="grid flex-1 grid-cols-3 gap-2">
@@ -407,7 +412,7 @@ function ImageGallerySummaryCard({
           </button>
         ))}
       </div>
-      <Button type="button" variant="outline" size="sm" className="mt-3 w-fit" onClick={() => onOpenGallery(0)}>
+      <Button type="button" variant="outline" size="sm" className="mt-3 w-fit whitespace-nowrap" onClick={() => onOpenGallery(0)}>
         <Images className="mr-2 h-4 w-4" />
         Open gallery
       </Button>
@@ -437,8 +442,8 @@ function LocationSummaryCard({
           <MapPin className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Location</p>
-          <p className="text-base font-semibold text-slate-900">Address</p>
+          <p className="text-xs font-normal text-slate-500">Location</p>
+          <p className="text-base font-medium text-slate-900">Address</p>
         </div>
       </div>
       {hasAddress ? (
@@ -519,7 +524,7 @@ function BookingMetaStat({
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+          <p className="text-xs font-normal text-slate-500">{label}</p>
           <p className="text-sm font-medium text-slate-900">{value}</p>
         </div>
       </div>

@@ -100,10 +100,12 @@ export function DropdownMenuContent({
   children,
   className,
   align = "start",
+  side = "bottom",
 }: {
   children: React.ReactNode;
   className?: string;
   align?: "start" | "end";
+  side?: "bottom" | "top";
 }) {
   const { open, triggerRef, contentRef } = useDropdownMenuContext();
   const [mounted, setMounted] = React.useState(false);
@@ -124,8 +126,13 @@ export function DropdownMenuContent({
         return;
       }
 
+      const top =
+        side === "top"
+          ? rect.top + window.scrollY - 8
+          : rect.bottom + 8 + window.scrollY;
+
       setPosition({
-        top: rect.bottom + 8 + window.scrollY,
+        top,
         left: (align === "end" ? rect.right : rect.left) + window.scrollX,
         minWidth: rect.width,
       });
@@ -139,7 +146,7 @@ export function DropdownMenuContent({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [align, open, triggerRef]);
+  }, [align, open, side, triggerRef]);
 
   if (!mounted || !open || !position) {
     return null;
@@ -152,6 +159,7 @@ export function DropdownMenuContent({
       className={cn(
         "z-50 rounded-md border border-slate-200 bg-white p-1 shadow-md",
         align === "end" && "-translate-x-full",
+        side === "top" && "-translate-y-full",
         className,
       )}
       style={{
@@ -165,6 +173,28 @@ export function DropdownMenuContent({
     </div>,
     document.body,
   );
+}
+
+export function DropdownMenuLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("px-2 py-1.5 text-sm font-semibold text-slate-900", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function DropdownMenuSeparator({ className }: { className?: string }) {
+  return <div className={cn("-mx-1 my-1 h-px bg-slate-100", className)} />;
+}
+
+export function DropdownMenuGroup({ children }: { children: React.ReactNode }) {
+  return <div>{children}</div>;
 }
 
 export function DropdownMenuItem({
